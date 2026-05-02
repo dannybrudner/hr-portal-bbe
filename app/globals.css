@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #1a1f2e;
+  --bg-secondary: #222736;
+  --bg-card: #2a3142;
+  --bg-card-hover: #313a50;
+  --bg-input: #1e2333;
+  --accent: #c9924a;
+  --accent-light: #e4b06a;
+  --accent-muted: rgba(201,146,74,0.15);
+  --accent-hover: #b8813b;
+  --text-primary: #f0ede8;
+  --text-secondary: #9aa0b4;
+  --text-muted: #626880;
+  --status-pending: #e4a94a;
+  --status-pending-bg: rgba(228,169,74,0.15);
+  --status-approved: #4caf80;
+  --status-approved-bg: rgba(76,175,128,0.15);
+  --status-rejected: #e06060;
+  --status-rejected-bg: rgba(224,96,96,0.15);
+  --border: rgba(255,255,255,0.08);
+  --border-accent: rgba(201,146,74,0.3);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { direction: ltr; }
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--bg-card-hover); border-radius: 3px; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: border-color 0.2s;
+}
+.card-hover:hover { border-color: var(--border-accent); }
+
+.tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+.tile:hover { background: var(--bg-card-hover); border-color: var(--accent); transform: translateY(-2px); }
+.tile-icon { width: 56px; height: 56px; border-radius: 16px; background: var(--accent-muted); display: flex; align-items: center; justify-content: center; color: var(--accent-light); }
+
+.btn-primary { background: var(--accent); color: #1a1000; font-weight: 600; border: none; border-radius: 12px; padding: 0.75rem 1.5rem; cursor: pointer; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; }
+.btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-secondary { background: transparent; color: var(--text-primary); font-weight: 500; border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1.5rem; cursor: pointer; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent-light); }
+
+.btn-danger { background: var(--status-rejected-bg); color: var(--status-rejected); font-weight: 600; border: 1px solid rgba(224,96,96,0.4); border-radius: 12px; padding: 0.75rem 1.5rem; cursor: pointer; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; }
+
+.input { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--text-primary); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--text-muted); }
+select.input option { background: var(--bg-card); }
+
+.badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-pending { background: var(--status-pending-bg); color: var(--status-pending); }
+.badge-approved { background: var(--status-approved-bg); color: var(--status-approved); }
+.badge-rejected { background: var(--status-rejected-bg); color: var(--status-rejected); }
+
+.avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-muted); border: 1px solid var(--border-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: var(--accent-light); flex-shrink: 0; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal { background: var(--bg-secondary); border: 1px solid var(--border-accent); border-radius: 24px; padding: 2rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+
+.section-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
+.section-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 1.5rem; }
+
+.nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 12px; color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+.nav-link:hover { background: var(--bg-card); color: var(--text-primary); }
+.nav-link.active { background: var(--accent-muted); color: var(--accent-light); border: 1px solid var(--border-accent); }
+
+.cal-day { aspect-ratio: 1; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 6px 4px; cursor: pointer; transition: all 0.15s; font-size: 13px; border: 1px solid transparent; min-height: 70px; gap: 3px; position: relative; }
+.cal-day:hover { background: var(--bg-card-hover); border-color: var(--border-accent); }
+.cal-day.today { border-color: var(--accent); background: var(--accent-muted); }
+.cal-day-num { font-weight: 600; font-size: 13px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.cal-day.today .cal-day-num { background: var(--accent); color: #1a1000; }
+.cal-day.shabbat .cal-day-num { color: var(--accent-light); }
+.cal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+
+label { font-size: 13px; color: var(--text-secondary); font-weight: 500; display: block; margin-bottom: 0.4rem; }
