@@ -5,26 +5,35 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #1a1f2e;
-  --bg-secondary: #222736;
-  --bg-card: #2a3142;
-  --bg-card-hover: #313a50;
-  --bg-input: #1e2333;
-  --accent: #c9924a;
-  --accent-light: #e4b06a;
-  --accent-muted: rgba(201,146,74,0.15);
-  --accent-hover: #b8813b;
+  /* Gunmetal dark — matched to BB logo background */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #272727;
+  --bg-card: #2e2e2e;
+  --bg-card-hover: #383838;
+  --bg-input: #222222;
+
+  /* Golden road accent — matched to logo yellow line */
+  --accent: #C9A227;
+  --accent-light: #e0b73a;
+  --accent-muted: rgba(201,162,39,0.15);
+  --accent-hover: #b8911e;
+
+  /* Text */
   --text-primary: #f0ede8;
   --text-secondary: #9aa0b4;
-  --text-muted: #626880;
+  --text-muted: #5a5f6e;
+
+  /* Status */
   --status-pending: #e4a94a;
   --status-pending-bg: rgba(228,169,74,0.15);
   --status-approved: #4caf80;
   --status-approved-bg: rgba(76,175,128,0.15);
   --status-rejected: #e06060;
   --status-rejected-bg: rgba(224,96,96,0.15);
+
+  /* Border */
   --border: rgba(255,255,255,0.08);
-  --border-accent: rgba(201,146,74,0.3);
+  --border-accent: rgba(201,162,39,0.35);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,34 +50,14 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--bg-card-hover); border-radius: 3px; }
 
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1.5rem;
-  transition: border-color 0.2s;
-}
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; transition: border-color 0.2s; }
 .card-hover:hover { border-color: var(--border-accent); }
 
-.tile {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 2rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-  text-decoration: none;
-  color: var(--text-primary);
-}
+.tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s ease; text-align: center; text-decoration: none; color: var(--text-primary); }
 .tile:hover { background: var(--bg-card-hover); border-color: var(--accent); transform: translateY(-2px); }
 .tile-icon { width: 56px; height: 56px; border-radius: 16px; background: var(--accent-muted); display: flex; align-items: center; justify-content: center; color: var(--accent-light); }
 
-.btn-primary { background: var(--accent); color: #1a1000; font-weight: 600; border: none; border-radius: 12px; padding: 0.75rem 1.5rem; cursor: pointer; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; }
+.btn-primary { background: var(--accent); color: #1a1000; font-weight: 700; border: none; border-radius: 12px; padding: 0.75rem 1.5rem; cursor: pointer; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; letter-spacing: 0.01em; }
 .btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
@@ -89,7 +78,7 @@ select.input option { background: var(--bg-card); }
 
 .avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-muted); border: 1px solid var(--border-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: var(--accent-light); flex-shrink: 0; }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .modal { background: var(--bg-secondary); border: 1px solid var(--border-accent); border-radius: 24px; padding: 2rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
 
 .section-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
@@ -105,9 +94,11 @@ select.input option { background: var(--bg-card); }
 .cal-day-num { font-weight: 600; font-size: 13px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 .cal-day.today .cal-day-num { background: var(--accent); color: #1a1000; }
 .cal-day.shabbat .cal-day-num { color: var(--accent-light); }
-.cal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.3s ease forwards; }
 
 label { font-size: 13px; color: var(--text-secondary); font-weight: 500; display: block; margin-bottom: 0.4rem; }
+
+/* Gold horizontal rule for sections */
+.gold-rule { border: none; border-top: 1px solid var(--border-accent); margin: 1rem 0; }

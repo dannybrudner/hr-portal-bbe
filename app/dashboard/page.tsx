@@ -4,26 +4,13 @@ import { supabase, OfficeDay, CalendarEvent, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight, Plus, X, Building2 } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, addMonths, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths } from 'date-fns'
+import { getHoliday } from '@/lib/israeliHolidays'
 
 const HEBREW_DAYS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']
 const HEBREW_MONTHS: Record<number, string> = {
   0:'ינואר',1:'פברואר',2:'מרץ',3:'אפריל',4:'מאי',5:'יוני',
   6:'יולי',7:'אוגוסט',8:'ספטמבר',9:'אוקטובר',10:'נובמבר',11:'דצמבר'
-}
-
-const ISRAELI_HOLIDAYS_2026: Record<string, string> = {
-  '2026-01-01': 'ראש השנה',
-  '2026-03-26': 'פורים',
-  '2026-04-13': 'ערב פסח',
-  '2026-04-14': 'פסח',
-  '2026-04-20': 'שביעי של פסח',
-  '2026-05-01': 'יום העצמאות',
-  '2026-06-02': 'שבועות',
-  '2026-09-11': 'ראש השנה',
-  '2026-09-20': 'יום כיפור',
-  '2026-09-25': 'סוכות',
-  '2026-10-02': 'שמחת תורה',
 }
 
 export default function DashboardPage() {
@@ -103,10 +90,7 @@ export default function DashboardPage() {
     return events.filter(ev => ev.date === dateStr)
   }
 
-  function getHoliday(date: Date) {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    return ISRAELI_HOLIDAYS_2026[dateStr]
-  }
+  
 
   function isMeInOffice(date: Date) {
     const dateStr = format(date, 'yyyy-MM-dd')
@@ -180,7 +164,7 @@ export default function DashboardPage() {
           {days.map(day => {
             const officePeople = getDayOfficePeople(day)
             const dayEvents = getDayEvents(day)
-            const holiday = getHoliday(day)
+            const holiday = getHoliday(format(day, 'yyyy-MM-dd'))
             const meInOffice = isMeInOffice(day)
             const sat = isSat(day)
 
