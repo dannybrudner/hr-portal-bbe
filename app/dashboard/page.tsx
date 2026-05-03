@@ -213,15 +213,17 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', justifyContent: 'center' }}>
                     {officePeople.slice(0, 3).map(od => {
                       const p = allProfiles[od.user_id]
-                      const initials = p?.full_name ? p.full_name.split(' ').map((n:string) => n[0]).join('').slice(0,2).toUpperCase() : '?'
+                      const initials = (p as any)?.first_name_he ? (p as any).first_name_he : (p?.full_name ? p.full_name.split(' ')[0] : '?')
                       return (
                         <div key={od.id} title={p?.full_name || ''} style={{
-                          width: '16px', height: '16px', borderRadius: '4px',
-                          background: od.user_id === user?.id ? 'var(--accent)' : 'var(--bg-card-hover)',
+                          borderRadius: '4px',
+                          background: od.user_id === user?.id ? 'var(--accent)' : 'var(--accent-muted)',
                           border: '1px solid var(--border-accent)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '8px', fontWeight: '700',
+                          padding: '1px 4px',
+                          fontSize: '9px', fontWeight: '700',
                           color: od.user_id === user?.id ? '#1a1000' : 'var(--accent-light)',
+                          whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>{initials}</div>
                       )
                     })}

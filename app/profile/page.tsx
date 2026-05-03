@@ -7,12 +7,15 @@ import { Save, Plus, X, Award, Trash2, Upload } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth()
-  const [fullName, setFullName] = useState('')
+  const [firstNameHe, setFirstNameHe] = useState('')
+  const [lastNameHe, setLastNameHe] = useState('')
+  const [firstNameEn, setFirstNameEn] = useState('')
+  const [lastNameEn, setLastNameEn] = useState('')
+  const [privateEmail, setPrivateEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [emergencyName, setEmergencyName] = useState('')
   const [emergencyPhone, setEmergencyPhone] = useState('')
-  const [bio, setBio] = useState('')
   const [saving, setSaving] = useState(false)
   const [certs, setCerts] = useState<Certificate[]>([])
   const [showCertModal, setShowCertModal] = useState(false)
@@ -24,12 +27,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      setFullName(profile.full_name || '')
+      // Parse existing full_name into parts
+      const parts = (profile.full_name || '').split(' ')
+      setFirstNameHe((profile as any).first_name_he || parts[0] || '')
+      setLastNameHe((profile as any).last_name_he || parts[1] || '')
+      setFirstNameEn((profile as any).first_name_en || '')
+      setLastNameEn((profile as any).last_name_en || '')
+      setPrivateEmail((profile as any).private_email || '')
       setPhone(profile.phone || '')
       setAddress(profile.address || '')
       setEmergencyName(profile.emergency_contact_name || '')
       setEmergencyPhone(profile.emergency_contact_phone || '')
-      setBio(profile.bio || '')
     }
   }, [profile])
 
@@ -40,12 +48,19 @@ export default function ProfilePage() {
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
+    const fullName = `${firstNameHe} ${lastNameHe}`.trim()
+    const initials = firstNameHe.charAt(0).toUpperCase() + (lastNameHe.charAt(0).toUpperCase() || '')
     const { error } = await supabase.from('profiles').update({
-      full_name: fullName, phone, address,
+      full_name: fullName,
+      first_name_he: firstNameHe,
+      last_name_he: lastNameHe,
+      first_name_en: firstNameEn,
+      last_name_en: lastNameEn,
+      private_email: privateEmail,
+      phone, address,
       emergency_contact_name: emergencyName,
       emergency_contact_phone: emergencyPhone,
-      bio, avatar_initials: initials,
+      avatar_initials: initials,
     }).eq('id', user!.id)
     if (error) toast.error(error.message)
     else { toast.success('Profile saved!'); refreshProfile() }
@@ -83,7 +98,7 @@ export default function ProfilePage() {
     toast.success('Deleted')
   }
 
-  const initials = profile?.full_name ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : profile?.email?.slice(0,2).toUpperCase() ?? 'HR'
+  const initials = firstNameHe.charAt(0).toUpperCase() + (lastNameHe.charAt(0).toUpperCase() || '')
 
   return (
     <div className="fade-in">
@@ -91,38 +106,73 @@ export default function ProfilePage() {
       <div className="section-subtitle">Manage your personal information and credentials</div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1.5rem', marginBottom: '2rem' }}>
-        {/* Form */}
         <form onSubmit={saveProfile}>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '-0.5rem' }}>Personal Information</div>
+
+            {/* Hebrew name */}
+            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+              שם בעברית
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label>Full Name</label>
-                <input className="input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name" />
+                <label>שם פרטי</label>
+                <input className="input" value={firstNameHe} onChange={e => setFirstNameHe(e.target.value)} placeholder="שם פרטי" />
               </div>
+              <div>
+                <label>שם משפחה</label>
+                <input className="input" value={lastNameHe} onChange={e => setLastNameHe(e.target.value)} placeholder="שם משפחה" />
+              </div>
+            </div>
+
+            {/* English name */}
+            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+              Name in English
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label>First Name</label>
+                <input className="input" value={firstNameEn} onChange={e => setFirstNameEn(e.target.value)} placeholder="First name" />
+              </div>
+              <div>
+                <label>Last Name</label>
+                <input className="input" value={lastNameEn} onChange={e => setLastNameEn(e.target.value)} placeholder="Last name" />
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+              Contact Information
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
                 <label>Phone Number</label>
                 <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="050-000-0000" />
+              </div>
+              <div>
+                <label>Private Email</label>
+                <input className="input" type="email" value={privateEmail} onChange={e => setPrivateEmail(e.target.value)} placeholder="personal@gmail.com" />
               </div>
             </div>
             <div>
               <label>Address</label>
               <input className="input" value={address} onChange={e => setAddress(e.target.value)} placeholder="Street, City" />
             </div>
+
+            {/* Emergency */}
+            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+              Emergency Contact
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label>Emergency Contact Name</label>
+                <label>Name</label>
                 <input className="input" value={emergencyName} onChange={e => setEmergencyName(e.target.value)} placeholder="Contact name" />
               </div>
               <div>
-                <label>Emergency Contact Phone</label>
+                <label>Phone</label>
                 <input className="input" value={emergencyPhone} onChange={e => setEmergencyPhone(e.target.value)} placeholder="050-000-0000" />
               </div>
             </div>
-            <div>
-              <label>Bio (optional)</label>
-              <textarea className="input" rows={3} value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell us about yourself..." style={{ resize: 'vertical' }} />
-            </div>
+
             <button type="submit" className="btn-primary" disabled={saving} style={{ width: 'fit-content' }}>
               <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -132,10 +182,11 @@ export default function ProfilePage() {
         {/* Avatar card */}
         <div className="card" style={{ textAlign: 'center', alignSelf: 'flex-start' }}>
           <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'var(--accent-muted)', border: '2px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne, sans-serif', fontWeight: '700', fontSize: '28px', color: 'var(--accent-light)', margin: '0 auto 1rem' }}>
-            {initials}
+            {initials || 'HR'}
           </div>
-          <div style={{ fontWeight: '600', fontSize: '16px' }}>{profile?.full_name || 'Employee'}</div>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '0.25rem', wordBreak: 'break-all' }}>{profile?.email}</div>
+          <div style={{ fontWeight: '600', fontSize: '16px' }}>{firstNameHe} {lastNameHe}</div>
+          {firstNameEn && <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{firstNameEn} {lastNameEn}</div>}
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '0.25rem', wordBreak: 'break-all' }}>{profile?.email}</div>
           <div style={{ marginTop: '0.75rem' }}>
             <span className={`badge ${profile?.role === 'manager' ? 'badge-approved' : 'badge-pending'}`}>
               {profile?.role === 'manager' ? '⭐ Manager' : '👤 Employee'}
@@ -168,9 +219,7 @@ export default function ProfilePage() {
                   <div style={{ fontWeight: '600', fontSize: '14px' }}>{c.name}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{c.issued_by}</div>
                   {c.issue_date && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.issue_date}</div>}
-                  {c.file_url && (
-                    <a href={c.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent-light)', textDecoration: 'none' }}>📎 View file</a>
-                  )}
+                  {c.file_url && <a href={c.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent-light)', textDecoration: 'none' }}>📎 View file</a>}
                 </div>
                 <button onClick={() => deleteCert(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.2rem' }}>
                   <Trash2 size={14} />
@@ -189,23 +238,13 @@ export default function ProfilePage() {
               <button onClick={() => setShowCertModal(false)} className="btn-secondary" style={{ padding: '0.4rem' }}><X size={16} /></button>
             </div>
             <form onSubmit={addCert} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label>Certificate Name</label>
-                <input className="input" placeholder="e.g. B.Sc Computer Science" value={certName} onChange={e => setCertName(e.target.value)} required />
-              </div>
-              <div>
-                <label>Issued By</label>
-                <input className="input" placeholder="Institution name" value={certIssuedBy} onChange={e => setCertIssuedBy(e.target.value)} />
-              </div>
-              <div>
-                <label>Issue Date</label>
-                <input className="input" type="date" value={certDate} onChange={e => setCertDate(e.target.value)} />
-              </div>
+              <div><label>Certificate Name</label><input className="input" placeholder="e.g. B.Sc Computer Science" value={certName} onChange={e => setCertName(e.target.value)} required /></div>
+              <div><label>Issued By</label><input className="input" placeholder="Institution name" value={certIssuedBy} onChange={e => setCertIssuedBy(e.target.value)} /></div>
+              <div><label>Issue Date</label><input className="input" type="date" value={certDate} onChange={e => setCertDate(e.target.value)} /></div>
               <div>
                 <label>File (optional)</label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: '12px', padding: '1rem', cursor: 'pointer', color: certFile ? 'var(--accent-light)' : 'var(--text-muted)' }}>
-                  <Upload size={18} />
-                  {certFile ? certFile.name : 'Upload certificate file'}
+                  <Upload size={18} />{certFile ? certFile.name : 'Upload certificate file'}
                   <input type="file" style={{ display: 'none' }} accept="image/*,.pdf" onChange={e => setCertFile(e.target.files?.[0] || null)} />
                 </label>
               </div>
