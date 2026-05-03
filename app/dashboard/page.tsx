@@ -197,7 +197,9 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', justifyContent: 'center' }}>
                     {officePeople.slice(0, 3).map(od => {
                       const p = allProfiles[od.user_id]
-                      const initials = (p as any)?.first_name_he ? (p as any).first_name_he : (p?.full_name ? p.full_name.split(' ')[0] : '?')
+                      const initials = (p as any)?.first_name_he || 
+                        (p?.full_name ? p.full_name.split(' ')[0] : null) || 
+                        (p?.email ? p.email.split('@')[0] : '•')
                       return (
                         <div key={od.id} title={p?.full_name || ''} style={{
                           borderRadius: '4px',

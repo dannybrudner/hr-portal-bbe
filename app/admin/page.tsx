@@ -67,22 +67,37 @@ export default function AdminPage() {
     const { error } = await supabase.from('leave_requests').update({ status, manager_note: managerNote }).eq('id', id)
     if (error) { toast.error(error.message); setProcessingId(null); return }
 
-    // Send email notification
-    const req = requests.find(r => r.id === id)
-    if (req?.profiles?.email) {
+    // Find the request and send notifications
+    const leaveReq = requests.find(r => r.id === id)
+    if (leaveReq?.profiles?.email) {
       await fetch('/api/notify-leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: req.profiles.email,
-          name: req.profiles.full_name,
-          status, leaveType: req.leave_type,
-          startDate: req.start_date, endDate: req.end_date,
+          to: leaveReq.profiles.email,
+          name: leaveReq.profiles.full_name,
+          status, leaveType: leaveReq.leave_type,
+          startDate: leaveReq.start_date, endDate: leaveReq.end_date,
           note: managerNote,
         }),
-      }).catch(() => {})
+      })
     }
 
+    // Create in-app notification for the employee
+    if (leaveReq) {
+      const emoji = status === 'approved' ? '✅' : '❌'
+      const msg = status === 'approved'
+        ? `Your ${leaveReq.leave_type} request (${leaveReq.start_date} - ${leaveReq.end_date}) was approved.${managerNote ? ' Note: ' + managerNote : ''}`
+        : `Your ${leaveReq.leave_type} request (${leaveReq.start_date} - ${leaveReq.end_date}) was rejected.${managerNote ? ' Reason: ' + managerNote : ''}`
+      await supabase.from('notifications').insert({
+        user_id: leaveReq.user_id,
+        title: `${emoji} Leave Request ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        message: msg,
+        type: status === 'approved' ? 'leave_approved' : 'leave_rejected',
+        link: '/leave',
+        read: false,
+      })
+    }
     toast.success(`Request ${status}!`)
     setExpanded(null); setManagerNote('')
     fetchRequests()
@@ -116,7 +131,7 @@ export default function AdminPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to: selectedEmployee.email, name: selectedEmployee.full_name, month: MONTHS[payslipMonth-1], year: payslipYear }),
-    }).catch(() => {})
+    })
     toast.success('Payslip uploaded & employee notified!')
     setPayslipFile(null)
     selectEmployee(selectedEmployee)

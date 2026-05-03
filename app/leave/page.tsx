@@ -34,13 +34,23 @@ export default function LeavePage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const { error } = await supabase.from('leave_requests').insert({
+    const { data: inserted, error } = await supabase.from('leave_requests').insert({
       user_id: user!.id, leave_type: leaveType,
       start_date: startDate, end_date: endDate,
       reason, status: 'pending',
-    })
+    }).select().single()
     if (error) { toast.error(error.message); setLoading(false); return }
-    toast.success('Request submitted!')
+    const { data: prof } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single()
+    window.fetch('/api/notify-leave-request', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        leaveRequestId: inserted.id,
+        employeeName: (prof as any)?.full_name || user!.email,
+        employeeEmail: (prof as any)?.email || user!.email,
+        leaveType, startDate, endDate, reason,
+      }),
+    }).catch(() => {})
+    toast.success('Request submitted! Manager has been notified.')
     setShowModal(false)
     setStartDate(''); setEndDate(''); setReason(''); setLeaveType('חופשה')
     fetch()
