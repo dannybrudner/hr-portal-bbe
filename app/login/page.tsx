@@ -11,7 +11,9 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
+  const [signupDone, setSignupDone] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -50,8 +52,7 @@ function LoginForm() {
             phone: '', address: '', emergency_contact_name: '',
             emergency_contact_phone: '', bio: '',
           })
-          toast.success('Account created! You can now sign in.')
-          setMode('login')
+          setSignupDone(true)
         }
       }
     } catch (err: any) {
@@ -94,6 +95,19 @@ function LoginForm() {
         </div>
 
         {/* Card */}
+        {signupDone ? (
+          <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '1rem' }}>📬</div>
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', marginBottom: '0.75rem' }}>Check your email!</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              We sent a confirmation link to <strong style={{ color: 'var(--accent-light)' }}>{email}</strong>.<br />
+              Click the link to activate your account, then sign in.
+            </p>
+            <button className="btn-secondary" onClick={() => { setSignupDone(false); setMode('login') }}>
+              ← Back to Sign In
+            </button>
+          </div>
+        ) : (
         <div className="card" style={{ padding: '2rem' }}>
           {/* Tab switcher */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: 'var(--bg-input)', padding: '4px', borderRadius: '10px' }}>
@@ -125,6 +139,12 @@ function LoginForm() {
               <label>Password</label>
               <input className="input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
+            {mode === 'signup' && (
+              <div>
+                <label>Confirm Password</label>
+                <input className="input" type="password" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+              </div>
+            )}
 
             {mode === 'login' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }} onClick={() => setRememberMe(!rememberMe)}>
@@ -150,6 +170,7 @@ function LoginForm() {
             </button>
           </form>
         </div>
+        )}
       </div>
     </div>
   )

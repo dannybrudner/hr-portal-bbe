@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
-import { Plus, X, Trash2, Users, Clock, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, X, Trash2, Users, Clock, ExternalLink, ChevronDown, ChevronUp, Upload, FileSpreadsheet } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 type Project = { id: string; name: string; code: string; description: string; status: string; sharepoint_url: string }
@@ -68,6 +68,18 @@ export default function AdminProjectsPage() {
     }
     setHourSummaries(summaryMap)
     setLoading(false)
+  }
+
+  async function uploadTracker(projectId: string, file: File) {
+    if (!file) return
+    const ext = file.name.split('.').pop()
+    const path = `project-trackers/${projectId}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('documents').upload(path, file, { upsert: true })
+    if (uploadError) { toast.error('Upload failed: ' + uploadError.message); return }
+    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path)
+    const { error: updateError } = await supabase.from('projects').update({ sharepoint_url: urlData.publicUrl }).eq('id', projectId)
+    if (updateError) toast.error(updateError.message)
+    else { toast.success('Excel tracker uploaded!'); loadData() }
   }
 
   async function createProject(e: React.FormEvent) {

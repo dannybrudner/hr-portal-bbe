@@ -11,7 +11,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  const { leaveRequestId, employeeName, employeeEmail, leaveType, startDate, endDate, reason } = await req.json()
+  const { leaveRequestId, employeeName, employeeEmail, leaveType, startDate, endDate, reason, fileUrl } = await req.json()
   const { data: managers } = await supabaseAdmin.from('profiles').select('email, full_name').eq('role', 'manager')
   if (!managers?.length) return NextResponse.json({ ok: true, note: 'no managers' })
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     for (const manager of managers) {
       await resend.emails.send({
-        from: 'HR Portal <noreply@bb-eng.co.il>',
+        from: 'BB-Eng HR Portal <office@bb-eng.co.il>',
         to: manager.email,
         subject: `New Leave Request: ${employeeName} — ${leaveType} (${days} days)`,
         html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#1e1e1e;color:#f0ede8;border-radius:16px;overflow:hidden;">

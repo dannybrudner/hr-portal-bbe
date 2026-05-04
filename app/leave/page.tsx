@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, LeaveRequest } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
+import { Upload, X as XIcon, Paperclip } from 'lucide-react'
 import { Plus, X, Calendar, Clock } from 'lucide-react'
 import { format, differenceInCalendarDays } from 'date-fns'
 
@@ -15,6 +16,8 @@ export default function LeavePage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([])
   const [showModal, setShowModal] = useState(false)
   const [leaveType, setLeaveType] = useState('חופשה')
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [attachmentUrl, setAttachmentUrl] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
@@ -30,6 +33,14 @@ export default function LeavePage() {
   }, [user])
 
   useEffect(() => { fetch() }, [fetch])
+
+  async function uploadAttachment(file: File, leaveId: string): Promise<string> {
+    const path = `leave-attachments/${leaveId}/${file.name}`
+    const { error } = await supabase.storage.from('documents').upload(path, file, { upsert: true })
+    if (error) throw error
+    const { data } = supabase.storage.from('documents').getPublicUrl(path)
+    return data.publicUrl
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -47,12 +58,12 @@ export default function LeavePage() {
         leaveRequestId: inserted.id,
         employeeName: (prof as any)?.full_name || user!.email,
         employeeEmail: (prof as any)?.email || user!.email,
-        leaveType, startDate, endDate, reason,
+        leaveType, startDate, endDate, reason, fileUrl: attachmentUrl,
       }),
     }).catch(() => {})
     toast.success('Request submitted! Manager has been notified.')
     setShowModal(false)
-    setStartDate(''); setEndDate(''); setReason(''); setLeaveType('חופשה')
+    setStartDate(''); setEndDate(''); setReason(''); setLeaveType('חופשה'); setAttachmentFile(null); setAttachmentUrl('')
     fetch()
     setLoading(false)
   }
@@ -155,6 +166,28 @@ export default function LeavePage() {
                 <label>Reason (optional)</label>
                 <textarea className="input" rows={3} placeholder="Brief reason for your leave..." value={reason} onChange={e => setReason(e.target.value)} style={{ resize: 'vertical' }} />
               </div>
+              {/* File attachment */}
+              <div>
+                <label>Attachment (optional)</label>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  background: 'var(--bg-input)', border: `1px dashed ${attachmentFile ? 'var(--accent)' : 'var(--border)'}`,
+                  borderRadius: '12px', padding: '0.9rem 1rem', cursor: 'pointer',
+                  color: attachmentFile ? 'var(--accent-light)' : 'var(--text-muted)',
+                }}>
+                  <Paperclip size={16} />
+                  <span style={{ fontSize: '14px' }}>{attachmentFile ? attachmentFile.name : 'Attach sick note, certificate...'}</span>
+                  {attachmentFile && (
+                    <button type="button" onClick={e => { e.preventDefault(); setAttachmentFile(null) }}
+                      style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                      <XIcon size={14} />
+                    </button>
+                  )}
+                  <input type="file" style={{ display: 'none' }} accept="image/*,.pdf,.doc,.docx"
+                    onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Submitting...' : 'Submit Request'}</button>
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>

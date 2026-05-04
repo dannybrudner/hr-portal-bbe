@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     for (const r of recipients) {
       const personalBody = body.replace(/\{name\}/g, r.name || r.email)
       await resend.emails.send({
-        from: 'HR Portal <noreply@yourcompany.com>',
+        from: 'BB-Eng HR Portal <office@bb-eng.co.il>',
         to: r.email,
         subject,
         html: `

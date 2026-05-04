@@ -12,6 +12,7 @@ const TABS = [
   { id: 'docs', label: 'Employee Documents', icon: '📁' },
   { id: 'email', label: 'Send Email', icon: '📧' },
   { id: 'users', label: 'User Management', icon: '👥' },
+  { id: 'refunds', label: 'Refund Requests', icon: '💳' },
 ]
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -28,6 +29,8 @@ export default function AdminPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Profile | null>(null)
   const [empPayslips, setEmpPayslips] = useState<Payslip[]>([])
   const [empTaxForms, setEmpTaxForms] = useState<TaxForm[]>([])
+  const [refunds, setRefunds] = useState<any[]>([])
+  const [refundFilter, setRefundFilter] = useState<string>('all')
   const [uploadingPayslip, setUploadingPayslip] = useState(false)
   const [uploadingTax, setUploadingTax] = useState(false)
   const [payslipFile, setPayslipFile] = useState<File|null>(null)
@@ -101,7 +104,21 @@ export default function AdminPage() {
     toast.success(`Request ${status}!`)
     setExpanded(null); setManagerNote('')
     fetchRequests()
+    fetchRefunds()
     setProcessingId(null)
+  }
+
+  async function fetchRefunds() {
+    const { data } = await supabase.from('refund_requests')
+      .select('*, profiles(full_name, email)')
+      .order('created_at', { ascending: false })
+    setRefunds(data || [])
+  }
+
+  async function updateRefundStatus(id: string, status: string) {
+    const { error } = await supabase.from('refund_requests').update({ status }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success(`Marked as ${status}`); fetchRefunds() }
   }
 
   async function selectEmployee(p: Profile) {
@@ -172,11 +189,8 @@ export default function AdminPage() {
     setSendingEmail(false)
   }
 
-  async function toggleRole(p: Profile) {
-    const newRole = p.role === 'manager' ? 'employee' : 'manager'
-    await supabase.from('profiles').update({ role: newRole }).eq('id', p.id)
-    toast.success(`${p.full_name} is now ${newRole}`)
-    fetchProfiles()
+  async function toggleRole(_p: Profile) {
+    toast.error('Role assignment is done via backend only')
   }
 
   const approvedSummary = allProfiles.map(p => {
@@ -432,7 +446,7 @@ export default function AdminPage() {
       {tab === 'users' && (
         <div>
           <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-            Employees ({allProfiles.length}) · Click to toggle manager role
+            Employees ({allProfiles.length}) · Role assignment via backend only
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
             {allProfiles.map(p => (
@@ -449,12 +463,60 @@ export default function AdminPage() {
                 </div>
                 {p.id !== user!.id && (
                   <button onClick={() => toggleRole(p)} className="btn-secondary" style={{ padding: '0.4rem 0.75rem', fontSize: '12px', flexShrink: 0 }}>
-                    {p.role === 'manager' ? <><UserX size={14} /> Set Employee</> : <><UserCheck size={14} /> Set Manager</>}
+                    Role: {p.role}
                   </button>
                 )}
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* REFUNDS TAB */}
+      {tab === 'refunds' && (
+        <div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            {['all','pending','approved','refunded','denied'].map(f => (
+              <button key={f} onClick={() => setRefundFilter(f)}
+                className={refundFilter === f ? 'btn-primary' : 'btn-secondary'}
+                style={{ padding: '0.4rem 1rem', fontSize: '13px', textTransform: 'capitalize' }}>
+                {f}
+              </button>
+            ))}
+          </div>
+          {refunds.filter(r => refundFilter === 'all' || r.status === refundFilter).length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+              No refund requests{refundFilter !== 'all' ? ` with status "${refundFilter}"` : ''}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {refunds.filter(r => refundFilter === 'all' || r.status === refundFilter).map(r => {
+                const statusColors: Record<string,string> = { pending: 'badge-pending', approved: 'badge-approved', refunded: 'badge-approved', denied: 'badge-rejected' }
+                const nextStatuses: Record<string, string[]> = { pending: ['approved','denied'], approved: ['refunded','denied'], denied: ['approved'], refunded: [] }
+                return (
+                  <div key={r.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <div style={{ fontWeight: '600', fontSize: '15px' }}>{(r.profiles as any)?.full_name || 'Unknown'}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{r.title}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.category} · {new Date(r.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div style={{ fontWeight: '700', fontSize: '18px', color: 'var(--accent-light)' }}>{r.amount} {r.currency}</div>
+                    {r.receipt_url && <a href={r.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent-light)', textDecoration: 'none', background: 'var(--accent-muted)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--border-accent)' }}>📎 Receipt</a>}
+                    <span className={`badge ${statusColors[r.status] || 'badge-pending'}`} style={{ textTransform: 'capitalize' }}>{r.status}</span>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      {(nextStatuses[r.status] || []).map(next => (
+                        <button key={next} onClick={() => updateRefundStatus(r.id, next)}
+                          className={next === 'denied' ? 'btn-danger' : 'btn-primary'}
+                          style={{ padding: '0.35rem 0.9rem', fontSize: '12px', textTransform: 'capitalize' }}>
+                          → {next}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

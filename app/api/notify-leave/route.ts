@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await resend.emails.send({
-      from: 'HR Portal <noreply@yourcompany.com>',
+      from: 'BB-Eng HR Portal <office@bb-eng.co.il>',
       to,
       subject: `Leave Request ${statusText} — ${leaveType}`,
       html: `
