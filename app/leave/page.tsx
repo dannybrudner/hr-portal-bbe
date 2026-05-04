@@ -35,11 +35,14 @@ export default function LeavePage() {
   useEffect(() => { fetch() }, [fetch])
 
   async function uploadAttachment(file: File, leaveId: string): Promise<string> {
-    const path = `leave-attachments/${leaveId}/${file.name}`
-    const { error } = await supabase.storage.from('documents').upload(path, file, { upsert: true })
+    // Sanitize filename to prevent path traversal
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const path = `leave-attachments/${leaveId}/${safeName}`
+    const { error } = await supabase.storage.from('documents').upload(path, file, { upsert: false })
     if (error) throw error
-    const { data } = supabase.storage.from('documents').getPublicUrl(path)
-    return data.publicUrl
+    // Return the storage path only — signed URLs generated server-side on demand
+    // Do NOT use getPublicUrl — bucket must be private
+    return path
   }
 
   async function submit(e: React.FormEvent) {

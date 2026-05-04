@@ -36,13 +36,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      // Reject unconfirmed users — must verify email first
+      const confirmedUser = session?.user?.email_confirmed_at ? session.user : null
+      setUser(confirmedUser ?? null)
+      if (confirmedUser) fetchProfile(confirmedUser.id)
+      else if (session?.user && !session.user.email_confirmed_at) {
+        // Sign them out cleanly so they get redirected to login
+        supabase.auth.signOut()
+      }
       setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      const confirmedUser = session?.user?.email_confirmed_at ? session.user : null
+      setUser(confirmedUser ?? null)
+      if (confirmedUser) fetchProfile(confirmedUser.id)
       else setProfile(null)
     })
     return () => subscription.unsubscribe()

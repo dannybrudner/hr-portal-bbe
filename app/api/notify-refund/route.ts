@@ -5,7 +5,7 @@ import { sign } from 'jsonwebtoken'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://portal.bb-eng.co.il'
-const jwtSecret = process.env.JWT_SECRET || 'change-me-in-env'
+const jwtSecret = process.env.JWT_SECRET
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,13 +13,17 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: NextRequest) {
+  if (!jwtSecret) {
+    console.error('JWT_SECRET env var is not set')
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+  }
   const { refundId, employeeName, employeeEmail, title, amount, currency, category, type } = await req.json()
 
   const { data: managers } = await supabaseAdmin.from('profiles').select('email, full_name').eq('role', 'manager')
   if (!managers?.length) return NextResponse.json({ ok: true })
 
   // Generate signed action tokens (1 week expiry)
-  const makeToken = (status: string) => sign({ refundId, status }, jwtSecret, { expiresIn: '7d' })
+  const makeToken = (status: string) => sign({ refundId, status }, jwtSecret!, { expiresIn: '7d' })
 
   // For new request — send approve/deny links
   if (type === 'new') {
