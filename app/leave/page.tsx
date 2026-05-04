@@ -18,6 +18,7 @@ export default function LeavePage() {
   const [leaveType, setLeaveType] = useState('חופשה')
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const [attachmentUrl, setAttachmentUrl] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
@@ -28,9 +29,10 @@ export default function LeavePage() {
       .from('leave_requests')
       .select('*')
       .eq('user_id', user!.id)
+      .eq('archived', showArchived)
       .order('created_at', { ascending: false })
     setRequests(data || [])
-  }, [user])
+  }, [user, showArchived])
 
   useEffect(() => { fetch() }, [fetch])
 
@@ -69,6 +71,18 @@ export default function LeavePage() {
     setStartDate(''); setEndDate(''); setReason(''); setLeaveType('חופשה'); setAttachmentFile(null); setAttachmentUrl('')
     fetch()
     setLoading(false)
+  }
+
+  async function archiveRequest(id: string) {
+    const { error } = await supabase.from('leave_requests').update({ archived: true }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success('Request archived'); fetch() }
+  }
+
+  async function unarchiveRequest(id: string) {
+    const { error } = await supabase.from('leave_requests').update({ archived: false }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success('Restored'); fetch() }
   }
 
   const days = (r: LeaveRequest) => differenceInCalendarDays(new Date(r.end_date), new Date(r.start_date)) + 1
@@ -122,6 +136,22 @@ export default function LeavePage() {
                 <span className={`badge badge-${r.status}`}>
                   {r.status === 'pending' ? '⏳' : r.status === 'approved' ? '✓' : '✗'} {r.status}
                 </span>
+                {!showArchived && (r.status === 'approved' || r.status === 'rejected') && (
+                  <button onClick={() => archiveRequest(r.id)}
+                    className="btn-secondary"
+                    style={{ padding: '0.3rem 0.6rem', fontSize: '11px', opacity: 0.7 }}
+                    title="Archive this request">
+                    🗂
+                  </button>
+                )}
+                {showArchived && (
+                  <button onClick={() => unarchiveRequest(r.id)}
+                    className="btn-secondary"
+                    style={{ padding: '0.3rem 0.6rem', fontSize: '11px' }}
+                    title="Restore">
+                    ↩
+                  </button>
+                )}
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                   <Clock size={10} style={{ display: 'inline', marginRight: '3px' }} />
                   {format(new Date(r.created_at), 'dd/MM/yy')}
@@ -131,6 +161,20 @@ export default function LeavePage() {
           ))}
         </div>
       )}
+
+      {/* Archive / Active toggle */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button onClick={() => setShowArchived(false)}
+          className={showArchived ? 'btn-secondary' : 'btn-primary'}
+          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
+          Active
+        </button>
+        <button onClick={() => setShowArchived(true)}
+          className={showArchived ? 'btn-primary' : 'btn-secondary'}
+          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
+          🗂 Archived
+        </button>
+      </div>
 
       {showModal && (
         <div className="modal-overlay">

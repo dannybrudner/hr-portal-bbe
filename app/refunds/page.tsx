@@ -15,6 +15,7 @@ export default function RefundsPage() {
   const { user } = useAuth()
   const [requests, setRequests] = useState<RefundRequest[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
   const [currency, setCurrency] = useState('ILS')
@@ -56,12 +57,36 @@ export default function RefundsPage() {
     setLoading(false)
   }
 
+  async function archiveRefund(id: string) {
+    const { error } = await supabase.from('refund_requests').update({ archived: true }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success('Request archived'); fetch() }
+  }
+
+  async function unarchiveRefund(id: string) {
+    const { error } = await supabase.from('refund_requests').update({ archived: false }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success('Restored'); fetch() }
+  }
+
   return (
     <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
         <div>
           <div className="section-title">Refund Requests</div>
           <div className="section-subtitle">Submit expense reimbursements and track their status</div>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
+        <button onClick={() => setShowArchived(false)}
+          className={showArchived ? 'btn-secondary' : 'btn-primary'}
+          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
+          Active
+        </button>
+        <button onClick={() => setShowArchived(true)}
+          className={showArchived ? 'btn-primary' : 'btn-secondary'}
+          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
+          🗂 Archived
+        </button>
+      </div>
         </div>
         <button className="btn-primary" onClick={() => setShowModal(true)}><Plus size={16} /> New Refund</button>
       </div>
@@ -98,6 +123,18 @@ export default function RefundsPage() {
                   {r.amount.toLocaleString()} {r.currency}
                 </div>
                 <span className={`badge badge-${r.status}`}>{r.status}</span>
+                {!showArchived && r.status !== 'pending' && (
+                  <button onClick={() => archiveRefund(r.id)}
+                    className="btn-secondary"
+                    style={{ padding: '0.3rem 0.6rem', fontSize: '11px', opacity: 0.7 }}
+                    title="Archive">🗂</button>
+                )}
+                {showArchived && (
+                  <button onClick={() => unarchiveRefund(r.id)}
+                    className="btn-secondary"
+                    style={{ padding: '0.3rem 0.6rem', fontSize: '11px' }}
+                    title="Restore">↩</button>
+                )}
               </div>
             </div>
           ))}

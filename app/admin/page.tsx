@@ -9,10 +9,10 @@ import { format, differenceInCalendarDays } from 'date-fns'
 
 const TABS = [
   { id: 'leave', label: 'Leave Requests', icon: '🗓️' },
-  { id: 'docs', label: 'Employee Documents', icon: '📁' },
+  { id: 'refunds', label: 'Refunds', icon: '💳' },
+  { id: 'docs', label: 'Documents', icon: '📁' },
   { id: 'email', label: 'Send Email', icon: '📧' },
-  { id: 'users', label: 'User Management', icon: '👥' },
-  { id: 'refunds', label: 'Refund Requests', icon: '💳' },
+  { id: 'users', label: 'Team', icon: '👥' },
 ]
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -31,6 +31,8 @@ export default function AdminPage() {
   const [empTaxForms, setEmpTaxForms] = useState<TaxForm[]>([])
   const [refunds, setRefunds] = useState<any[]>([])
   const [refundFilter, setRefundFilter] = useState<string>('all')
+  const [leaveArchived, setLeaveArchived] = useState(false)
+  const [refundArchived, setRefundArchived] = useState(false)
   const [uploadingPayslip, setUploadingPayslip] = useState(false)
   const [uploadingTax, setUploadingTax] = useState(false)
   const [payslipFile, setPayslipFile] = useState<File|null>(null)
@@ -51,11 +53,11 @@ export default function AdminPage() {
   }, [profile, router])
 
   const fetchRequests = useCallback(async () => {
-    const query = supabase.from('leave_requests').select('*, profiles(*)').order('created_at', { ascending: false })
+    const query = supabase.from('leave_requests').select('*, profiles(*)').eq('archived', leaveArchived).order('created_at', { ascending: false })
     if (filter !== 'all') query.eq('status', filter)
     const { data } = await query
     setRequests(data || [])
-  }, [filter])
+  }, [filter, leaveArchived])
 
   const fetchProfiles = useCallback(async () => {
     const { data } = await supabase.from('profiles').select('*').order('full_name')
@@ -199,6 +201,21 @@ export default function AdminPage() {
     return { profile: p, days: total }
   }).filter(s => s.days > 0)
 
+  async function archiveLeave(id: string, archive: boolean) {
+    const { error } = await supabase.from('leave_requests').update({ archived: archive }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success(archive ? 'Archived' : 'Restored'); fetchRequests() }
+  }
+
+  async function archiveRefundItem(id: string, archive: boolean) {
+    const { error } = await supabase.from('refund_requests').update({ archived: archive }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success(archive ? 'Archived' : 'Restored'); fetchRefunds() }
+  }
+
+  const pendingLeaveCount = requests.filter(r => r.status === 'pending').length
+  const pendingRefundCount = refunds.filter(r => r.status === 'pending').length
+
   return (
     <div className="fade-in">
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -211,21 +228,45 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Summary bar */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {pendingLeaveCount > 0 && (
+          <div onClick={() => setTab('leave')} style={{ cursor: 'pointer', background: 'var(--status-pending-bg)', border: '1px solid var(--status-pending)', borderRadius: '10px', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '13px', color: 'var(--status-pending)' }}>
+            🗓️ <strong>{pendingLeaveCount}</strong> leave request{pendingLeaveCount > 1 ? 's' : ''} pending
+          </div>
+        )}
+        {pendingRefundCount > 0 && (
+          <div onClick={() => setTab('refunds')} style={{ cursor: 'pointer', background: 'var(--status-pending-bg)', border: '1px solid var(--status-pending)', borderRadius: '10px', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '13px', color: 'var(--status-pending)' }}>
+            💳 <strong>{pendingRefundCount}</strong> refund{pendingRefundCount > 1 ? 's' : ''} pending
+          </div>
+        )}
+      </div>
+
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: '0.6rem 1.2rem', borderRadius: '12px', border: '1px solid',
-            borderColor: tab === t.id ? 'var(--accent)' : 'var(--border)',
-            background: tab === t.id ? 'var(--accent-muted)' : 'var(--bg-card)',
-            color: tab === t.id ? 'var(--accent-light)' : 'var(--text-secondary)',
-            cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif',
-            fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem',
-            transition: 'all 0.2s',
-          }}>
-            {t.icon} {t.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: '0' }}>
+        {TABS.map(t => {
+          const badge = t.id === 'leave' ? pendingLeaveCount : t.id === 'refunds' ? pendingRefundCount : 0
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              padding: '0.6rem 1.1rem', borderRadius: '10px 10px 0 0', border: '1px solid',
+              borderBottom: tab === t.id ? '1px solid var(--bg-card)' : '1px solid var(--border)',
+              borderColor: tab === t.id ? 'var(--border-accent)' : 'var(--border)',
+              background: tab === t.id ? 'var(--bg-card)' : 'transparent',
+              color: tab === t.id ? 'var(--accent-light)' : 'var(--text-secondary)',
+              cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif',
+              fontSize: '13px', fontWeight: tab === t.id ? '600' : '400',
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              transition: 'all 0.15s', marginBottom: '-1px',
+            }}>
+              {t.icon} {t.label}
+              {badge > 0 && (
+                <span style={{ background: '#e06060', color: '#fff', borderRadius: '10px', fontSize: '10px', fontWeight: '700', padding: '1px 6px', lineHeight: 1.4 }}>
+                  {badge}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* LEAVE REQUESTS TAB */}
@@ -248,16 +289,25 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-            {(['all','pending','approved','rejected'] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)} style={{
-                padding: '0.4rem 1rem', borderRadius: '8px', border: '1px solid',
-                borderColor: filter === f ? 'var(--accent)' : 'var(--border)',
-                background: filter === f ? 'var(--accent-muted)' : 'transparent',
-                color: filter === f ? 'var(--accent-light)' : 'var(--text-secondary)',
-                cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '13px', fontWeight: '500',
-              }}>{f}</button>
-            ))}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {(['all','pending','approved','rejected'] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)} style={{
+                  padding: '0.4rem 1rem', borderRadius: '8px', border: '1px solid',
+                  borderColor: filter === f ? 'var(--accent)' : 'var(--border)',
+                  background: filter === f ? 'var(--accent-muted)' : 'transparent',
+                  color: filter === f ? 'var(--accent-light)' : 'var(--text-secondary)',
+                  cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '13px', fontWeight: '500',
+                  textTransform: 'capitalize',
+                }}>{f}</button>
+              ))}
+            </div>
+            <button onClick={() => setLeaveArchived(a => !a)} style={{
+              padding: '0.4rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)',
+              background: leaveArchived ? 'var(--accent-muted)' : 'transparent',
+              color: leaveArchived ? 'var(--accent-light)' : 'var(--text-muted)',
+              cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '12px',
+            }}>🗂 {leaveArchived ? 'Viewing archived' : 'Show archived'}</button>
           </div>
 
           {requests.length === 0 ? (
@@ -285,6 +335,12 @@ export default function AdminPage() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <span className={`badge badge-${r.status}`}>{r.status}</span>
+                        {!leaveArchived && r.status !== 'pending' && (
+                          <button onClick={() => archiveLeave(r.id, true)} title="Archive" className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '11px', opacity: 0.6 }}>🗂</button>
+                        )}
+                        {leaveArchived && (
+                          <button onClick={() => archiveLeave(r.id, false)} title="Restore" className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '11px' }}>↩</button>
+                        )}
                         {r.status === 'pending' && (
                           <button onClick={() => { setExpanded(isExpanded ? null : r.id); setManagerNote('') }} className="btn-secondary" style={{ padding: '0.4rem 0.75rem', fontSize: '13px' }}>
                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -475,14 +531,22 @@ export default function AdminPage() {
       {/* REFUNDS TAB */}
       {tab === 'refunds' && (
         <div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            {['all','pending','approved','refunded','denied'].map(f => (
-              <button key={f} onClick={() => setRefundFilter(f)}
-                className={refundFilter === f ? 'btn-primary' : 'btn-secondary'}
-                style={{ padding: '0.4rem 1rem', fontSize: '13px', textTransform: 'capitalize' }}>
-                {f}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {['all','pending','approved','refunded','denied'].map(f => (
+                <button key={f} onClick={() => setRefundFilter(f)}
+                  className={refundFilter === f ? 'btn-primary' : 'btn-secondary'}
+                  style={{ padding: '0.4rem 0.9rem', fontSize: '13px', textTransform: 'capitalize' }}>
+                  {f}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setRefundArchived(a => !a)} style={{
+              padding: '0.4rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)',
+              background: refundArchived ? 'var(--accent-muted)' : 'transparent',
+              color: refundArchived ? 'var(--accent-light)' : 'var(--text-muted)',
+              cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '12px',
+            }}>🗂 {refundArchived ? 'Viewing archived' : 'Show archived'}</button>
           </div>
           {refunds.filter(r => refundFilter === 'all' || r.status === refundFilter).length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
@@ -490,7 +554,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {refunds.filter(r => refundFilter === 'all' || r.status === refundFilter).map(r => {
+              {refunds.filter(r => (refundFilter === 'all' || r.status === refundFilter) && (r.archived || false) === refundArchived).map(r => {
                 const statusColors: Record<string,string> = { pending: 'badge-pending', approved: 'badge-approved', refunded: 'badge-approved', denied: 'badge-rejected' }
                 const nextStatuses: Record<string, string[]> = { pending: ['approved','denied'], approved: ['refunded','denied'], denied: ['approved'], refunded: [] }
                 return (
@@ -503,7 +567,13 @@ export default function AdminPage() {
                     <div style={{ fontWeight: '700', fontSize: '18px', color: 'var(--accent-light)' }}>{r.amount} {r.currency}</div>
                     {r.receipt_url && <a href={r.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent-light)', textDecoration: 'none', background: 'var(--accent-muted)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--border-accent)' }}>📎 Receipt</a>}
                     <span className={`badge ${statusColors[r.status] || 'badge-pending'}`} style={{ textTransform: 'capitalize' }}>{r.status}</span>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      {!refundArchived && r.status !== 'pending' && (
+                        <button onClick={() => archiveRefundItem(r.id, true)} title="Archive" className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '11px', opacity: 0.6 }}>🗂</button>
+                      )}
+                      {refundArchived && (
+                        <button onClick={() => archiveRefundItem(r.id, false)} title="Restore" className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '11px' }}>↩</button>
+                      )}
                       {(nextStatuses[r.status] || []).map(next => (
                         <button key={next} onClick={() => updateRefundStatus(r.id, next)}
                           className={next === 'denied' ? 'btn-danger' : 'btn-primary'}
