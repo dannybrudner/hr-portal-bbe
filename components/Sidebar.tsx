@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 import {
   LayoutDashboard, CalendarDays, ReceiptText, FileText,
-  FolderOpen, User, ShieldCheck, LogOut, Bell
+  FolderOpen, User, ShieldCheck, LogOut, Bell, Briefcase
 } from 'lucide-react'
 
 export default function Sidebar() {
@@ -65,6 +65,7 @@ export default function Sidebar() {
     { href: '/payslips', label: 'Payslips', icon: FileText, badge: 0 },
     { href: '/documents', label: 'Documents', icon: FolderOpen, badge: 0 },
     { href: '/profile', label: 'My Profile', icon: User, badge: 0 },
+  { href: '/projects', label: 'Projects & Hours', icon: Briefcase, badge: 0 },
   ]
 
   return (
@@ -110,8 +111,9 @@ export default function Sidebar() {
         })}
 
         {profile?.role === 'manager' && (
+          <>
           <button
-            className={`nav-link ${pathname.startsWith('/admin') ? 'active' : ''}`}
+            className={`nav-link ${pathname === '/admin' ? 'active' : ''}`}
             onClick={() => router.push('/admin')}
             style={{ marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem', position: 'relative' }}
           >
@@ -127,6 +129,15 @@ export default function Sidebar() {
               </span>
             )}
           </button>
+          <button
+            className={`nav-link ${pathname.startsWith('/admin/projects') ? 'active' : ''}`}
+            onClick={() => router.push('/admin/projects')}
+            style={{ paddingLeft: '2.5rem', fontSize: '13px' }}
+          >
+            <Briefcase size={15} />
+            Project Management
+          </button>
+          </>
         )}
       </nav>
 
