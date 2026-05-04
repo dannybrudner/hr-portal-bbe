@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight, Plus, X, Building2 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths } from 'date-fns'
-import { getHoliday } from '@/lib/israeliHolidays'
+import { fetchHolidaysForMonth, getHoliday } from '@/lib/israeliHolidays'
 
 const HEBREW_DAYS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']
 const HEBREW_MONTHS: Record<number, string> = {
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [newEventTitle, setNewEventTitle] = useState('')
   const [newEventDate, setNewEventDate] = useState('')
   const [loading, setLoading] = useState(false)
+  const [holidayCache, setHolidayCache] = useState<Record<string,string>>({})
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -46,6 +47,14 @@ export default function DashboardPage() {
   }, [currentDate])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => {
+    const y = currentDate.getFullYear()
+    const m = currentDate.getMonth() + 1
+    fetchHolidaysForMonth(y, m).then(curr => {
+      setHolidayCache(prev => ({ ...prev, ...curr }))
+    })
+  }, [currentDate])
 
   async function toggleOfficeDay(date: Date) {
     if (!user) return
@@ -164,7 +173,7 @@ export default function DashboardPage() {
           {days.map(day => {
             const officePeople = getDayOfficePeople(day)
             const dayEvents = getDayEvents(day)
-            const holiday = getHoliday(format(day, 'yyyy-MM-dd'))
+            const holiday = getHoliday(format(day, 'yyyy-MM-dd'), holidayCache)
             const meInOffice = isMeInOffice(day)
             const sat = isSat(day)
 

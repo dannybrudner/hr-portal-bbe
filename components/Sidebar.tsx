@@ -64,8 +64,8 @@ export default function Sidebar() {
     { href: '/refunds', label: 'Refund Requests', icon: ReceiptText, badge: 0 },
     { href: '/payslips', label: 'Payslips', icon: FileText, badge: 0 },
     { href: '/documents', label: 'Documents', icon: FolderOpen, badge: 0 },
-    { href: '/profile', label: 'My Profile', icon: User, badge: 0 },
-  { href: '/projects', label: 'Projects & Hours', icon: Briefcase, badge: 0 },
+    { href: '/projects', label: 'Projects & Hours', icon: Briefcase, badge: 0 },
+  { href: '/profile', label: 'My Profile', icon: User, badge: 0 },
   ]
 
   return (

@@ -1,72 +1,40 @@
-// Correct Israeli public holidays תשפ"ה / תשפ"ו
-const HOLIDAYS: [string, string][] = [
-  // 2025
-  ['2025-01-13', "ט\"ו בשבט"],
-  ['2025-03-13', 'תענית אסתר'],
-  ['2025-03-14', 'פורים'],
-  ['2025-03-15', 'שושן פורים'],
-  ['2025-04-13', 'ערב פסח'],
-  ['2025-04-14', "פסח א'"],
-  ['2025-04-15', "פסח ב'"],
-  ['2025-04-20', 'שביעי של פסח'],
-  ['2025-04-21', 'אחרון של פסח'],
-  ['2025-04-24', 'יום השואה'],
-  ['2025-04-30', 'יום הזיכרון'],
-  ['2025-05-01', 'יום העצמאות'],
-  ['2025-05-26', "ל\"ג בעומר"],
-  ['2025-06-02', 'שבועות'],
-  ['2025-06-03', "שבועות ב'"],
-  ['2025-09-22', 'ערב ראש השנה'],
-  ['2025-09-23', "ראש השנה א'"],
-  ['2025-09-24', "ראש השנה ב'"],
-  ['2025-10-01', 'ערב יום כיפור'],
-  ['2025-10-02', 'יום כיפור'],
-  ['2025-10-06', 'ערב סוכות'],
-  ['2025-10-07', 'סוכות'],
-  ['2025-10-13', 'הושענא רבה'],
-  ['2025-10-14', 'שמיני עצרת'],
-  ['2025-10-15', 'שמחת תורה'],
-  ['2025-12-15', "חנוכה א'"],
-  ['2025-12-16', "חנוכה ב'"],
-  ['2025-12-17', "חנוכה ג'"],
-  ['2025-12-18', "חנוכה ד'"],
-  ['2025-12-19', "חנוכה ה'"],
-  ['2025-12-20', "חנוכה ו'"],
-  ['2025-12-21', "חנוכה ז'"],
-  ['2025-12-22', "חנוכה ח'"],
-  // 2026
-  ['2026-01-02', "ט\"ו בשבט"],
-  ['2026-03-03', 'תענית אסתר'],
-  ['2026-03-05', 'פורים'],
-  ['2026-03-06', 'שושן פורים'],
-  ['2026-04-01', 'ערב פסח'],
-  ['2026-04-02', "פסח א'"],
-  ['2026-04-03', "פסח ב'"],
-  ['2026-04-08', 'שביעי של פסח'],
-  ['2026-04-09', 'אחרון של פסח'],
-  ['2026-04-08', 'יום השואה'],
-  ['2026-04-15', 'יום הזיכרון'],
-  ['2026-04-16', 'יום העצמאות'],
-  ['2026-05-10', "ל\"ג בעומר"],
-  ['2026-05-22', 'שבועות'],
-  ['2026-05-23', "שבועות ב'"],
-  ['2026-09-11', "ראש השנה א'"],
-  ['2026-09-12', "ראש השנה ב'"],
-  ['2026-09-20', 'יום כיפור'],
-  ['2026-09-25', 'סוכות'],
-  ['2026-10-02', 'שמחת תורה'],
-  ['2026-12-05', "חנוכה א'"],
-  ['2026-12-06', "חנוכה ב'"],
-  ['2026-12-07', "חנוכה ג'"],
-  ['2026-12-08', "חנוכה ד'"],
-  ['2026-12-09', "חנוכה ה'"],
-  ['2026-12-10', "חנוכה ו'"],
-  ['2026-12-11', "חנוכה ז'"],
-  ['2026-12-12', "חנוכה ח'"],
-]
+// Fetch Israeli holidays from Hebcal REST API
+// https://www.hebcal.com/api/holidays/
+// Called client-side (browser can reach it, server cannot)
 
-const HOLIDAY_MAP = new Map(HOLIDAYS)
+const CACHE: Record<string, Record<string, string>> = {}
 
-export function getHoliday(dateStr: string): string | undefined {
-  return HOLIDAY_MAP.get(dateStr)
+export async function fetchHolidaysForMonth(year: number, month: number): Promise<Record<string, string>> {
+  const key = `${year}-${month}`
+  if (CACHE[key]) return CACHE[key]
+
+  try {
+    // Hebcal API: maj=major, min=minor, mod=modern Israeli, nx=Rosh Chodesh off
+    const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&mod=on&nx=off&year=${year}&month=${month}&c=off&M=on&s=on`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('API error')
+    const data = await res.json()
+
+    const map: Record<string, string> = {}
+    for (const item of data.items || []) {
+      if (item.date && item.title) {
+        // item.date is "2026-05-01" format
+        const dateStr = item.date.split('T')[0]
+        // Prefer Hebrew title if available
+        const title = item.hebrew || item.title
+        map[dateStr] = title
+      }
+    }
+    CACHE[key] = map
+    return map
+  } catch {
+    // Fallback to empty map on error - calendar still works, just no holiday labels
+    CACHE[key] = {}
+    return {}
+  }
+}
+
+// Sync getter for already-cached data (for calendar render)
+export function getHoliday(dateStr: string, cache: Record<string, string>): string | undefined {
+  return cache[dateStr]
 }
