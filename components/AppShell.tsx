@@ -5,12 +5,18 @@ import { useAuth } from '@/lib/AuthContext'
 import Sidebar from '@/components/Sidebar'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) router.push('/login')
-  }, [user, loading, router])
+    if (loading) return
+    if (!user) { router.push('/login'); return }
+    // Block access until profile is complete
+    // profile_complete is false by default for new users
+    if (profile && !(profile as any).profile_complete) {
+      router.push('/complete-profile')
+    }
+  }, [user, profile, loading, router])
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>

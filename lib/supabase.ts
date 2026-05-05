@@ -17,6 +17,14 @@ export type Profile = {
   role: 'employee' | 'manager'
   avatar_initials: string
   created_at: string
+  // Extended fields
+  first_name_he?: string
+  last_name_he?: string
+  first_name_en?: string
+  last_name_en?: string
+  private_email?: string
+  birthday?: string
+  profile_complete?: boolean
 }
 
 export type LeaveRequest = {
@@ -100,4 +108,6 @@ export type CalendarEvent = {
   date: string
   created_by: string
   created_at: string
+  updated_at?: string
+  event_type?: 'company' | 'birthday' | 'holiday'
 }

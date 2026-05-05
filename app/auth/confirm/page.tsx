@@ -57,11 +57,11 @@ function ConfirmContent() {
               }}>✓</div>
               <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '22px', marginBottom: '0.75rem' }}>Email Confirmed!</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '2rem', lineHeight: 1.6 }}>
-                Your account has been verified successfully.<br />You can now sign in to the HR Portal.
+                Your email has been verified. Now complete your profile to access the portal.
               </p>
-              <button className="btn-primary" onClick={() => router.push('/login')}
+              <button className="btn-primary" onClick={() => router.push('/complete-profile')}
                 style={{ width: '100%', justifyContent: 'center', fontSize: '15px' }}>
-                → Go to Sign In
+                → Complete Your Profile
               </button>
             </>
           )}

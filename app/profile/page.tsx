@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const [lastNameHe, setLastNameHe] = useState('')
   const [firstNameEn, setFirstNameEn] = useState('')
   const [lastNameEn, setLastNameEn] = useState('')
+  const [birthday, setBirthday] = useState('')
   const [privateEmail, setPrivateEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -33,6 +34,7 @@ export default function ProfilePage() {
       setLastNameHe((profile as any).last_name_he || parts[1] || '')
       setFirstNameEn((profile as any).first_name_en || '')
       setLastNameEn((profile as any).last_name_en || '')
+      setBirthday((profile as any).birthday || '')
       setPrivateEmail((profile as any).private_email || '')
       setPhone(profile.phone || '')
       setAddress(profile.address || '')
@@ -45,10 +47,42 @@ export default function ProfilePage() {
     if (user) supabase.from('certificates').select('*').eq('user_id', user.id).order('issue_date', { ascending: false }).then(({ data }) => setCerts(data || []))
   }, [user])
 
+  async function syncBirthdayToCalendar(birthdayDate: string, firstName: string) {
+    // birthday is "YYYY-MM-DD" — we create recurring yearly events by inserting for next 5 years
+    // but we only key on month-day to avoid year conflicts
+    const [, month, day] = birthdayDate.split('-')
+    const currentYear = new Date().getFullYear()
+    for (const yr of [currentYear, currentYear + 1]) {
+      const dateStr = `${yr}-${month}-${day}`
+      // Check if birthday event already exists for this user+date
+      const { data: existing } = await supabase
+        .from('calendar_events')
+        .select('id')
+        .eq('created_by', user!.id)
+        .eq('event_type', 'birthday')
+        .eq('date', dateStr)
+        .maybeSingle()
+      if (!existing) {
+        await supabase.from('calendar_events').insert({
+          title: `יום הולדת ${firstName} 🎂`,
+          date: dateStr,
+          created_by: user!.id,
+          event_type: 'birthday',
+        })
+      } else {
+        // Update title in case name changed
+        await supabase.from('calendar_events').update({
+          title: `יום הולדת ${firstName} 🎂`
+        }).eq('id', existing.id)
+      }
+    }
+  }
+
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
     const fullName = `${firstNameHe} ${lastNameHe}`.trim()
+    const initials2 = firstNameHe.charAt(0).toUpperCase() + (lastNameHe.charAt(0).toUpperCase() || '')
     const initials = firstNameHe.charAt(0).toUpperCase() + (lastNameHe.charAt(0).toUpperCase() || '')
     const { error } = await supabase.from('profiles').update({
       full_name: fullName,
@@ -56,14 +90,21 @@ export default function ProfilePage() {
       last_name_he: lastNameHe,
       first_name_en: firstNameEn,
       last_name_en: lastNameEn,
+      birthday: birthday || null,
       private_email: privateEmail,
       phone, address,
       emergency_contact_name: emergencyName,
       emergency_contact_phone: emergencyPhone,
       avatar_initials: initials,
     }).eq('id', user!.id)
-    if (error) toast.error(error.message)
-    else { toast.success('Profile saved!'); refreshProfile() }
+    if (error) { toast.error(error.message) } else {
+      toast.success('Profile saved!')
+      refreshProfile()
+      // Sync birthday to calendar if set
+      if (birthday) {
+        await syncBirthdayToCalendar(birthday, firstNameHe || firstNameEn || fullName.split(' ')[0])
+      }
+    }
     setSaving(false)
   }
 
@@ -122,6 +163,15 @@ export default function ProfilePage() {
                 <label>שם משפחה</label>
                 <input className="input" value={lastNameHe} onChange={e => setLastNameHe(e.target.value)} placeholder="שם משפחה" />
               </div>
+            </div>
+
+            {/* Birthday */}
+            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+              תאריך לידה
+            </div>
+            <div>
+              <label>Birthday <span style={{ color: 'var(--status-rejected)', fontWeight: '700' }}>*</span></label>
+              <input className="input" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} required />
             </div>
 
             {/* English name */}
