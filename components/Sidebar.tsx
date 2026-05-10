@@ -137,6 +137,14 @@ export default function Sidebar() {
             <Briefcase size={15} />
             Project Management
           </button>
+          <button
+            className={`nav-link ${pathname.startsWith('/admin/payslips') ? 'active' : ''}`}
+            onClick={() => router.push('/admin/payslips')}
+            style={{ paddingLeft: '2.5rem', fontSize: '13px' }}
+          >
+            <FileText size={15} />
+            Payslips
+          </button>
           </>
         )}
       </nav>
