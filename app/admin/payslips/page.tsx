@@ -276,9 +276,7 @@ export default function ManagerPayslipsPage() {
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{emp.email}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent-light)', background: 'var(--accent-muted)', padding: '3px 10px', borderRadius: '20px', border: '1px solid var(--border-accent)' }}>
-                      {empPayslips.length} payslip{empPayslips.length !== 1 ? 's' : ''}
-                    </span>
+
                     <button onClick={e => { e.stopPropagation(); setTargetEmployee(emp); setShowUpload(true) }}
                       className="btn-primary" style={{ padding: '0.35rem 0.85rem', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Upload size={13} /> Upload
