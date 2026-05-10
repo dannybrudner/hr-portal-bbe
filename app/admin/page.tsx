@@ -4,6 +4,7 @@ import { supabase, LeaveRequest, Profile, Payslip, TaxForm } from '@/lib/supabas
 import { useAuth } from '@/lib/AuthContext'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { DocViewButton } from '@/components/DocViewer'
 import { ArrowLeft, CheckCircle, XCircle, Upload, Mail, Users, FileText, ChevronDown, ChevronUp, UserCheck, UserX } from 'lucide-react'
 import { format, differenceInCalendarDays } from 'date-fns'
 
@@ -427,7 +428,7 @@ export default function AdminPage() {
                   {empPayslips.map(ps => (
                     <div key={ps.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}>
                       <span style={{ fontSize: '14px', fontWeight: '600' }}>{MONTHS[ps.month-1]} {ps.year}</span>
-                      <a href={ps.file_url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ padding: '0.3rem 0.75rem', fontSize: '12px', textDecoration: 'none' }}>View</a>
+                      <DocViewButton url={ps.file_url} name={`Payslip ${ps.month}/${ps.year}`} style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}>View</DocViewButton>
                     </div>
                   ))}
                 </div>
@@ -458,7 +459,7 @@ export default function AdminPage() {
                   {empTaxForms.map(tf => (
                     <div key={tf.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}>
                       <span style={{ fontSize: '14px', fontWeight: '600' }}>Form {tf.form_type} — {tf.year}</span>
-                      <a href={tf.file_url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ padding: '0.3rem 0.75rem', fontSize: '12px', textDecoration: 'none' }}>View</a>
+                      <DocViewButton url={tf.file_url} name={`Tax Form ${tf.form_type} ${tf.year}`} style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}>View</DocViewButton>
                     </div>
                   ))}
                 </div>
@@ -584,7 +585,7 @@ export default function AdminPage() {
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.category} · {new Date(r.created_at).toLocaleDateString()}</div>
                     </div>
                     <div style={{ fontWeight: '700', fontSize: '18px', color: 'var(--accent-light)' }}>{r.amount} {r.currency}</div>
-                    {r.receipt_url && <a href={r.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent-light)', textDecoration: 'none', background: 'var(--accent-muted)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--border-accent)' }}>📎 Receipt</a>}
+                    {r.receipt_url && <DocViewButton url={r.receipt_url} name={`Receipt — ${r.title}`} style={{ fontSize: '12px', padding: '4px 10px' }}>📎 Receipt</DocViewButton>}
                     <span className={`badge ${statusColors[r.status] || 'badge-pending'}`} style={{ textTransform: 'capitalize' }}>{r.status}</span>
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                       {!refundArchived && r.status !== 'pending' && (

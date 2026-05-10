@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, RefundRequest } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
+import { DocViewButton } from '@/components/DocViewer'
 import { Plus, X, ReceiptText, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 

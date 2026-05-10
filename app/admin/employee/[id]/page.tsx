@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase, Profile, Certificate, Payslip, TaxForm, LeaveRequest } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
-import { getSignedUrl } from '@/lib/documentService'
+import { DocViewButton } from '@/components/DocViewer'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Award, FileText, Calendar, Mail, Phone, MapPin, AlertCircle, ExternalLink } from 'lucide-react'
 import { format, differenceInCalendarDays } from 'date-fns'
@@ -28,7 +28,6 @@ export default function EmployeeProfilePage() {
   const [payslips, setPayslips] = useState<Payslip[]>([])
   const [leaveHistory, setLeaveHistory] = useState<LeaveRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [openingId, setOpeningId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'leave'>('overview')
 
   useEffect(() => {
@@ -55,23 +54,7 @@ export default function EmployeeProfilePage() {
     setLoading(false)
   }
 
-  async function openDoc(storagePath: string, id: string) {
-    setOpeningId(id)
-    const url = await getSignedUrl(storagePath)
-    setOpeningId(null)
-    if (url) window.open(url, '_blank')
-    else toast.error('Could not open file')
-  }
 
-  async function openCert(fileUrl: string) {
-    if (!fileUrl) return
-    // Certs may use old public URL or new path — handle both
-    if (fileUrl.startsWith('http')) window.open(fileUrl, '_blank')
-    else {
-      const url = await getSignedUrl(fileUrl)
-      if (url) window.open(url, '_blank')
-    }
-  }
 
   if (loading) return (
     <div className="fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -180,10 +163,13 @@ export default function EmployeeProfilePage() {
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{c.issued_by}</div>
                   {c.issue_date && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.issue_date}</div>}
                   {c.file_url && (
-                    <button onClick={() => openCert(c.file_url)} className="btn-secondary"
-                      style={{ marginTop: '6px', padding: '0.25rem 0.6rem', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <DocViewButton
+                      url={c.file_url.startsWith('http') ? c.file_url : undefined}
+                      storagePath={!c.file_url.startsWith('http') ? c.file_url : undefined}
+                      name={c.name}
+                      style={{ marginTop: '6px', padding: '0.25rem 0.6rem', fontSize: '11px' }}>
                       <ExternalLink size={11} /> View
-                    </button>
+                    </DocViewButton>
                   )}
                 </div>
               </div>
@@ -200,8 +186,8 @@ export default function EmployeeProfilePage() {
             ) : payslips.slice(0, 6).map(ps => (
               <div key={ps.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: '600', fontSize: '14px' }}>{MONTHS[ps.month - 1]} {ps.year}</span>
-                <a href={ps.file_url} target="_blank" rel="noreferrer" className="btn-secondary"
-                  style={{ padding: '0.25rem 0.6rem', fontSize: '11px', textDecoration: 'none' }}>View</a>
+                <DocViewButton url={ps.file_url} name={`Payslip ${MONTHS[ps.month-1]} ${ps.year}`}
+                  style={{ padding: '0.25rem 0.6rem', fontSize: '11px' }}>View</DocViewButton>
               </div>
             ))}
           </div>
@@ -234,10 +220,10 @@ export default function EmployeeProfilePage() {
                             {DOC_TYPE_LABELS[doc.document_type] || doc.document_type} · {format(new Date(doc.upload_date), 'dd/MM/yyyy')}
                           </div>
                         </div>
-                        <button onClick={() => openDoc(doc.storage_path, doc.id)} disabled={openingId === doc.id}
-                          className="btn-secondary" style={{ padding: '0.3rem 0.65rem', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
-                          <ExternalLink size={12} /> {openingId === doc.id ? '...' : 'View'}
-                        </button>
+                        <DocViewButton storagePath={doc.storage_path} name={doc.file_name}
+                          style={{ padding: '0.3rem 0.65rem', fontSize: '11px', flexShrink: 0 }}>
+                          <ExternalLink size={12} /> View
+                        </DocViewButton>
                       </div>
                     ))}
                   </div>

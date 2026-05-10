@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
-import { uploadAndRegister, getSignedUrl, DocumentType } from '@/lib/documentService'
+import { uploadAndRegister, DocumentType } from '@/lib/documentService'
+import { DocViewButton } from '@/components/DocViewer'
 import toast from 'react-hot-toast'
 import { FolderOpen, Folder, Upload, FileText, X, Plus, Trash2, Search, ChevronRight, ExternalLink, Download } from 'lucide-react'
 import { format } from 'date-fns'
@@ -47,7 +48,7 @@ export default function DocumentsPage() {
   const [filterType, setFilterType] = useState('all')
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null)
-  const [openingId, setOpeningId] = useState<string | null>(null)
+
 
   const loadDocs = useCallback(async () => {
     if (!user) return
@@ -84,13 +85,7 @@ export default function DocumentsPage() {
     setUploading(false)
   }
 
-  async function openDoc(doc: EmpDoc) {
-    setOpeningId(doc.id)
-    const url = await getSignedUrl(doc.storage_path)
-    setOpeningId(null)
-    if (!url) { toast.error('Could not open file'); return }
-    window.open(url, '_blank')
-  }
+
 
   async function deleteDoc(id: string, storagePath: string) {
     if (!confirm('Delete this document?')) return
@@ -233,13 +228,9 @@ export default function DocumentsPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                    <button
-                      onClick={() => openDoc(doc)}
-                      disabled={openingId === doc.id}
-                      className="btn-secondary"
-                      style={{ padding: '0.35rem 0.75rem', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <ExternalLink size={13} /> {openingId === doc.id ? 'Opening...' : 'View'}
-                    </button>
+                    <DocViewButton storagePath={doc.storage_path} name={doc.file_name} style={{ padding: '0.35rem 0.75rem', fontSize: '12px' }}>
+                      <ExternalLink size={13} /> View
+                    </DocViewButton>
                     <button
                       onClick={() => deleteDoc(doc.id, doc.storage_path)}
                       className="btn-secondary"

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase, Certificate } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
+import { DocViewButton } from '@/components/DocViewer'
 import { Save, Plus, X, Award, Trash2, Upload } from 'lucide-react'
 
 export default function ProfilePage() {
@@ -269,7 +270,7 @@ export default function ProfilePage() {
                   <div style={{ fontWeight: '600', fontSize: '14px' }}>{c.name}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{c.issued_by}</div>
                   {c.issue_date && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.issue_date}</div>}
-                  {c.file_url && <a href={c.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent-light)', textDecoration: 'none' }}>📎 View file</a>}
+                  {c.file_url && <DocViewButton url={c.file_url} name={c.name} style={{ fontSize: '12px', padding: '0.2rem 0.6rem' }}>📎 View</DocViewButton>}
                 </div>
                 <button onClick={() => deleteCert(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.2rem' }}>
                   <Trash2 size={14} />
