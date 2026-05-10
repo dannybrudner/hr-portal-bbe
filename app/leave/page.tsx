@@ -74,15 +74,37 @@ export default function LeavePage() {
   }
 
   async function archiveRequest(id: string) {
-    const { error } = await supabase.from('leave_requests').update({ archived: true }).eq('id', id)
-    if (error) toast.error(error.message)
-    else { toast.success('Request archived'); fetch() }
+    // Optimistic: remove from list immediately
+    setRequests(prev => prev.filter(r => r.id !== id))
+    const { error, count } = await supabase
+      .from('leave_requests')
+      .update({ archived: true })
+      .eq('id', id)
+      .eq('user_id', user!.id)  // explicit user_id for RLS
+      .select('id')
+    if (error) {
+      toast.error('Archive failed: ' + error.message)
+      fetch() // revert
+    } else {
+      toast.success('Request archived')
+      // fetch() not needed — optimistic update already removed it
+    }
   }
 
   async function unarchiveRequest(id: string) {
-    const { error } = await supabase.from('leave_requests').update({ archived: false }).eq('id', id)
-    if (error) toast.error(error.message)
-    else { toast.success('Restored'); fetch() }
+    setRequests(prev => prev.filter(r => r.id !== id))
+    const { error } = await supabase
+      .from('leave_requests')
+      .update({ archived: false })
+      .eq('id', id)
+      .eq('user_id', user!.id)
+      .select('id')
+    if (error) {
+      toast.error('Restore failed: ' + error.message)
+      fetch()
+    } else {
+      toast.success('Restored')
+    }
   }
 
   const days = (r: LeaveRequest) => differenceInCalendarDays(new Date(r.end_date), new Date(r.start_date)) + 1
@@ -96,6 +118,20 @@ export default function LeavePage() {
         </div>
         <button className="btn-primary" onClick={() => setShowModal(true)}>
           <Plus size={16} /> New Request
+        </button>
+      </div>
+
+      {/* Active / Archived toggle */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button onClick={() => setShowArchived(false)}
+          className={!showArchived ? 'btn-primary' : 'btn-secondary'}
+          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
+          Active
+        </button>
+        <button onClick={() => setShowArchived(true)}
+          className={showArchived ? 'btn-primary' : 'btn-secondary'}
+          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
+          🗂 Archived
         </button>
       </div>
 
@@ -161,20 +197,6 @@ export default function LeavePage() {
           ))}
         </div>
       )}
-
-      {/* Archive / Active toggle */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-        <button onClick={() => setShowArchived(false)}
-          className={showArchived ? 'btn-secondary' : 'btn-primary'}
-          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
-          Active
-        </button>
-        <button onClick={() => setShowArchived(true)}
-          className={showArchived ? 'btn-primary' : 'btn-secondary'}
-          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
-          🗂 Archived
-        </button>
-      </div>
 
       {showModal && (
         <div className="modal-overlay">

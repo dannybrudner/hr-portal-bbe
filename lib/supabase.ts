@@ -37,6 +37,8 @@ export type LeaveRequest = {
   status: 'pending' | 'approved' | 'rejected'
   manager_note: string
   created_at: string
+  archived: boolean
+  attachment_path?: string
   profiles?: Profile
 }
 
