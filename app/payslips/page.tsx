@@ -53,7 +53,7 @@ export default function PayslipsPage() {
                   </div>
                 </div>
                 <DocViewButton
-                  url={p.file_url}
+                  {...(p.file_url.startsWith('http') ? { url: p.file_url } : { storagePath: p.file_url })}
                   name={`Payslip ${MONTHS[p.month - 1]} ${p.year}`}
                   style={{ width: '100%', justifyContent: 'center', fontSize: '13px' }}>
                   <Download size={14} /> View & Download
@@ -88,7 +88,7 @@ export default function PayslipsPage() {
                   </div>
                 </div>
                 <DocViewButton
-                  url={tf.file_url}
+                  {...(tf.file_url.startsWith('http') ? { url: tf.file_url } : { storagePath: tf.file_url })}
                   name={`Tax Form ${tf.form_type} ${tf.year}`}
                   style={{ width: '100%', justifyContent: 'center', fontSize: '13px' }}>
                   <Download size={14} /> View & Download

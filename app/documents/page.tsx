@@ -6,7 +6,8 @@ import { uploadAndRegister, DocumentType } from '@/lib/documentService'
 import { DocViewButton } from '@/components/DocViewer'
 import toast from 'react-hot-toast'
 import Modal from '@/components/Modal'
-import { FolderOpen, Folder, Upload, FileText, X, Plus, Trash2, Search, ChevronRight, ExternalLink, Download } from 'lucide-react'
+import DropZone, { DropZoneFile } from '@/components/DropZone'
+import { FolderOpen, Folder, FileText, X, Plus, Trash2, Search, ChevronRight, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 
 type EmpDoc = {
@@ -258,17 +259,13 @@ export default function DocumentsPage() {
               </div>
               <div>
                 <label>File</label>
-                <label style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  background: 'var(--bg-input)', border: `1px dashed ${file ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: '12px', padding: '1rem', cursor: 'pointer',
-                  color: file ? 'var(--accent-light)' : 'var(--text-muted)',
-                }}>
-                  <Upload size={16} />
-                  <span style={{ fontSize: '14px' }}>{file ? file.name : 'Click to select file (PDF, image, doc)'}</span>
-                  <input type="file" style={{ display: 'none' }} accept="image/*,.pdf,.doc,.docx,.xlsx,.xls"
-                    onChange={e => setFile(e.target.files?.[0] || null)} />
-                </label>
+                <DropZone
+                  accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
+                  maxSizeMB={20}
+                  multiple={false}
+                  label="Drag file here or click to browse"
+                  onFiles={(files: DropZoneFile[]) => setFile(files[0]?.file || null)}
+                />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="submit" className="btn-primary" disabled={uploading || !file}>

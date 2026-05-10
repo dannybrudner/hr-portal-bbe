@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
 import { Upload, X as XIcon, Paperclip, Plus, Calendar, Clock, Archive, RotateCcw } from 'lucide-react'
 import Modal from '@/components/Modal'
+import DropZone, { DropZoneFile } from '@/components/DropZone'
 import { format, differenceInCalendarDays } from 'date-fns'
 
 const LEAVE_TYPES = ['חופשה', 'מחלה', 'מילואים']
@@ -284,24 +285,14 @@ export default function LeavePage() {
                 <textarea className="input" rows={3} placeholder="Brief reason for your leave..." value={reason} onChange={e => setReason(e.target.value)} style={{ resize: 'vertical' }} />
               </div>
               <div>
-                <label>Attachment (optional)</label>
-                <label style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  background: 'var(--bg-input)', border: `1px dashed ${attachmentFile ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: '12px', padding: '0.9rem 1rem', cursor: 'pointer',
-                  color: attachmentFile ? 'var(--accent-light)' : 'var(--text-muted)',
-                }}>
-                  <Paperclip size={16} />
-                  <span style={{ fontSize: '14px' }}>{attachmentFile ? attachmentFile.name : 'Attach sick note, certificate...'}</span>
-                  {attachmentFile && (
-                    <button type="button" onClick={e => { e.preventDefault(); setAttachmentFile(null) }}
-                      style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                      <XIcon size={14} />
-                    </button>
-                  )}
-                  <input type="file" style={{ display: 'none' }} accept="image/*,.pdf,.doc,.docx"
-                    onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
-                </label>
+                <label>Attachment (optional) — sick note, certificate...</label>
+                <DropZone
+                  accept=".pdf,image/*,.doc,.docx"
+                  maxSizeMB={10}
+                  multiple={false}
+                  label="Attach sick note or supporting document"
+                  onFiles={(files: DropZoneFile[]) => setAttachmentFile(files[0]?.file || null)}
+                />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Submitting...' : 'Submit Request'}</button>

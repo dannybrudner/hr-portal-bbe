@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/AuthContext'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { DocViewButton } from '@/components/DocViewer'
+import DropZone, { DropZoneFile } from '@/components/DropZone'
+import { registerDocument } from '@/lib/documentService'
 import { ArrowLeft, CheckCircle, XCircle, Upload, Mail, Users, FileText, ChevronDown, ChevronUp, UserCheck, UserX } from 'lucide-react'
 import { format, differenceInCalendarDays } from 'date-fns'
 
@@ -138,41 +140,88 @@ export default function AdminPage() {
     e.preventDefault()
     if (!payslipFile || !selectedEmployee) return
     setUploadingPayslip(true)
-    const path = `payslips/${selectedEmployee.id}/${payslipYear}_${String(payslipMonth).padStart(2,'0')}_${Date.now()}.pdf`
-    const { error: upErr } = await supabase.storage.from('documents').upload(path, payslipFile)
-    if (upErr) { toast.error(upErr.message); setUploadingPayslip(false); return }
-    const { data: url } = supabase.storage.from('documents').getPublicUrl(path)
-    await supabase.from('payslips').insert({
-      user_id: selectedEmployee.id, file_url: url.publicUrl,
-      file_name: payslipFile.name, month: payslipMonth, year: payslipYear, uploaded_by: user!.id,
-    })
-    // Notify employee
-    await fetch('/api/notify-payslip', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: selectedEmployee.email, name: selectedEmployee.full_name, month: MONTHS[payslipMonth-1], year: payslipYear }),
-    })
-    toast.success('Payslip uploaded & employee notified!')
-    setPayslipFile(null)
-    selectEmployee(selectedEmployee)
-    setUploadingPayslip(false)
+    try {
+      // Private path — never publicly guessable
+      const safeName = payslipFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = `payslips/${selectedEmployee.id}/${payslipYear}_${String(payslipMonth).padStart(2,'0')}_${Date.now()}_${safeName}`
+      const { error: upErr } = await supabase.storage.from('documents').upload(path, payslipFile, { upsert: false })
+      if (upErr) { toast.error('Upload failed: ' + upErr.message); return }
+
+      // Store path (not public URL) — access via signed URLs only
+      const { error: dbErr } = await supabase.from('payslips').insert({
+        user_id: selectedEmployee.id,
+        file_url: path,  // storage path, not public URL
+        file_name: payslipFile.name,
+        month: payslipMonth, year: payslipYear,
+        uploaded_by: user!.id,
+      })
+      if (dbErr) { toast.error('DB error: ' + dbErr.message); return }
+
+      // Register in centralized document system
+      await registerDocument({
+        employeeId: selectedEmployee.id,
+        uploadedBy: user!.id,
+        documentType: 'payslip',
+        fileName: payslipFile.name,
+        storagePath: path,
+        tags: [`${MONTHS[payslipMonth-1]} ${payslipYear}`, 'payslip'],
+      })
+
+      // Send Hebrew payslip email via secure server-side route
+      const session = await supabase.auth.getSession()
+      await fetch('/api/notify-payslip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          to: selectedEmployee.email,
+          employeeName: selectedEmployee.full_name,
+          month: payslipMonth,
+          year: payslipYear,
+        }),
+      })
+
+      toast.success('Payslip uploaded & employee notified!')
+      setPayslipFile(null)
+      selectEmployee(selectedEmployee)
+    } finally {
+      setUploadingPayslip(false)
+    }
   }
 
   async function uploadTaxForm(e: React.FormEvent) {
     e.preventDefault()
     if (!taxFile || !selectedEmployee) return
     setUploadingTax(true)
-    const path = `taxforms/${selectedEmployee.id}/form${taxType}_${taxYear}_${Date.now()}.pdf`
-    await supabase.storage.from('documents').upload(path, taxFile)
-    const { data: url } = supabase.storage.from('documents').getPublicUrl(path)
-    await supabase.from('tax_forms').insert({
-      user_id: selectedEmployee.id, file_url: url.publicUrl,
-      file_name: taxFile.name, form_type: taxType, year: taxYear,
-    })
-    toast.success('Tax form uploaded!')
-    setTaxFile(null)
-    selectEmployee(selectedEmployee)
-    setUploadingTax(false)
+    try {
+      const safeName = taxFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = `taxforms/${selectedEmployee.id}/form${taxType}_${taxYear}_${Date.now()}_${safeName}`
+      const { error: upErr } = await supabase.storage.from('documents').upload(path, taxFile, { upsert: false })
+      if (upErr) { toast.error('Upload failed: ' + upErr.message); return }
+
+      await supabase.from('tax_forms').insert({
+        user_id: selectedEmployee.id,
+        file_url: path,  // storage path only
+        file_name: taxFile.name, form_type: taxType, year: taxYear,
+      })
+
+      await registerDocument({
+        employeeId: selectedEmployee.id,
+        uploadedBy: user!.id,
+        documentType: 'tax_form',
+        fileName: taxFile.name,
+        storagePath: path,
+        tags: [`${taxYear}`, `form-${taxType}`],
+      })
+
+      toast.success('Tax form uploaded!')
+      setTaxFile(null)
+      selectEmployee(selectedEmployee)
+    } finally {
+      setUploadingTax(false)
+    }
   }
 
   async function sendEmail(e: React.FormEvent) {
@@ -417,10 +466,14 @@ export default function AdminPage() {
                       </select>
                       <input className="input" type="number" value={payslipYear} onChange={e => setPayslipYear(+e.target.value)} style={{ fontSize: '13px' }} />
                     </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: '10px', padding: '0.75rem', cursor: 'pointer', color: payslipFile ? 'var(--accent-light)' : 'var(--text-muted)', fontSize: '13px' }}>
-                      <Upload size={16} />{payslipFile ? payslipFile.name : 'Select PDF'}
-                      <input type="file" style={{ display: 'none' }} accept=".pdf,image/*" onChange={e => setPayslipFile(e.target.files?.[0] || null)} required />
-                    </label>
+                    <DropZone
+                      accept=".pdf,image/*"
+                      maxSizeMB={20}
+                      multiple={false}
+                      label="Drag payslip PDF here"
+                      sublabel="or click to browse"
+                      onFiles={(files: DropZoneFile[]) => setPayslipFile(files[0]?.file || null)}
+                    />
                     <button type="submit" className="btn-primary" disabled={uploadingPayslip} style={{ fontSize: '13px', padding: '0.5rem 1rem' }}>
                       <Upload size={14} /> {uploadingPayslip ? 'Uploading...' : 'Upload & Notify'}
                     </button>
@@ -428,7 +481,7 @@ export default function AdminPage() {
                   {empPayslips.map(ps => (
                     <div key={ps.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}>
                       <span style={{ fontSize: '14px', fontWeight: '600' }}>{MONTHS[ps.month-1]} {ps.year}</span>
-                      <DocViewButton url={ps.file_url} name={`Payslip ${ps.month}/${ps.year}`} style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}>View</DocViewButton>
+                      <DocViewButton {...(ps.file_url.startsWith('http') ? { url: ps.file_url } : { storagePath: ps.file_url })} name={`Payslip ${ps.month}/${ps.year}`} style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}>View</DocViewButton>
                     </div>
                   ))}
                 </div>
@@ -448,10 +501,14 @@ export default function AdminPage() {
                       </select>
                       <input className="input" type="number" value={taxYear} onChange={e => setTaxYear(+e.target.value)} style={{ fontSize: '13px' }} />
                     </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: '10px', padding: '0.75rem', cursor: 'pointer', color: taxFile ? 'var(--accent-light)' : 'var(--text-muted)', fontSize: '13px' }}>
-                      <Upload size={16} />{taxFile ? taxFile.name : 'Select PDF'}
-                      <input type="file" style={{ display: 'none' }} accept=".pdf,image/*" onChange={e => setTaxFile(e.target.files?.[0] || null)} required />
-                    </label>
+                    <DropZone
+                      accept=".pdf,image/*"
+                      maxSizeMB={20}
+                      multiple={false}
+                      label="Drag tax form here"
+                      sublabel="or click to browse"
+                      onFiles={(files: DropZoneFile[]) => setTaxFile(files[0]?.file || null)}
+                    />
                     <button type="submit" className="btn-primary" disabled={uploadingTax} style={{ fontSize: '13px', padding: '0.5rem 1rem' }}>
                       <Upload size={14} /> {uploadingTax ? 'Uploading...' : 'Upload Form'}
                     </button>
@@ -459,7 +516,7 @@ export default function AdminPage() {
                   {empTaxForms.map(tf => (
                     <div key={tf.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}>
                       <span style={{ fontSize: '14px', fontWeight: '600' }}>Form {tf.form_type} — {tf.year}</span>
-                      <DocViewButton url={tf.file_url} name={`Tax Form ${tf.form_type} ${tf.year}`} style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}>View</DocViewButton>
+                      <DocViewButton {...(tf.file_url.startsWith('http') ? { url: tf.file_url } : { storagePath: tf.file_url })} name={`Tax Form ${tf.form_type} ${tf.year}`} style={{ padding: '0.3rem 0.75rem', fontSize: '12px' }}>View</DocViewButton>
                     </div>
                   ))}
                 </div>
