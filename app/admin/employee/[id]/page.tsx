@@ -5,7 +5,7 @@ import { supabase, Profile, Certificate, Payslip, TaxForm, LeaveRequest } from '
 import { useAuth } from '@/lib/AuthContext'
 import { DocViewButton } from '@/components/DocViewer'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Award, FileText, Calendar, Mail, Phone, MapPin, AlertCircle, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Award, FileText, Calendar, Mail, Phone, MapPin, AlertCircle, ExternalLink, Trash2 } from 'lucide-react'
 import { format, differenceInCalendarDays } from 'date-fns'
 
 type EmpDoc = {
@@ -29,6 +29,8 @@ export default function EmployeeProfilePage() {
   const [leaveHistory, setLeaveHistory] = useState<LeaveRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'leave'>('overview')
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0) // 0=hidden, 1=first confirm, 2=second confirm
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (authLoading) return                          // wait for auth
@@ -55,6 +57,33 @@ export default function EmployeeProfilePage() {
   }
 
 
+
+  async function deleteEmployee() {
+    if (!emp) return
+    setDeleting(true)
+    try {
+      // Delete in order: leave dependent data first, then profile
+      await supabase.from('leave_requests').delete().eq('user_id', emp.id)
+      await supabase.from('refund_requests').delete().eq('user_id', emp.id)
+      await supabase.from('payslips').delete().eq('user_id', emp.id)
+      await supabase.from('tax_forms').delete().eq('user_id', emp.id)
+      await supabase.from('certificates').delete().eq('user_id', emp.id)
+      await supabase.from('hour_logs').delete().eq('user_id', emp.id)
+      await supabase.from('project_assignments').delete().eq('user_id', emp.id)
+      await supabase.from('office_days').delete().eq('user_id', emp.id)
+      await supabase.from('notifications').delete().eq('user_id', emp.id)
+      await supabase.from('employee_documents').delete().eq('employee_id', emp.id)
+      await supabase.from('calendar_events').delete().eq('created_by', emp.id).eq('event_type', 'birthday')
+      // Finally delete the profile (auth user stays — Supabase auth user must be deleted via admin API separately)
+      const { error } = await supabase.from('profiles').delete().eq('id', emp.id)
+      if (error) { toast.error('Delete failed: ' + error.message); setDeleting(false); return }
+      toast.success(`${emp.full_name || 'Employee'} has been removed.`)
+      router.push('/admin')
+    } catch (err: any) {
+      toast.error('Unexpected error: ' + err.message)
+      setDeleting(false)
+    }
+  }
 
   if (loading) return (
     <div className="fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -127,6 +156,47 @@ export default function EmployeeProfilePage() {
             </div>
           ))}
         </div>
+      {/* Delete employee — only visible to managers, requires double confirmation */}
+      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {deleteStep === 0 && (
+          <button
+            onClick={() => setDeleteStep(1)}
+            className="btn-danger"
+            style={{ fontSize: '13px', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: 0.75 }}>
+            <Trash2 size={14} /> Delete Employee
+          </button>
+        )}
+        {deleteStep === 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px', color: 'var(--status-rejected)', fontWeight: '600' }}>
+              Remove {emp?.full_name || 'this employee'} from the system?
+            </span>
+            <button onClick={() => setDeleteStep(2)} className="btn-danger"
+              style={{ fontSize: '13px', padding: '0.5rem 1rem' }}>
+              Yes, delete
+            </button>
+            <button onClick={() => setDeleteStep(0)} className="btn-secondary"
+              style={{ fontSize: '13px', padding: '0.5rem 1rem' }}>
+              Cancel
+            </button>
+          </div>
+        )}
+        {deleteStep === 2 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px', color: 'var(--status-rejected)', fontWeight: '700' }}>
+              ⚠️ This is permanent. All data will be deleted. Are you absolutely sure?
+            </span>
+            <button onClick={deleteEmployee} disabled={deleting} className="btn-danger"
+              style={{ fontSize: '13px', padding: '0.5rem 1rem', fontWeight: '700' }}>
+              <Trash2 size={14} /> {deleting ? 'Deleting...' : 'Permanently Delete'}
+            </button>
+            <button onClick={() => setDeleteStep(0)} className="btn-secondary"
+              style={{ fontSize: '13px', padding: '0.5rem 1rem' }}>
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
       </div>
 
       {/* Tabs */}
