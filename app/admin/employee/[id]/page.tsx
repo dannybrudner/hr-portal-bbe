@@ -20,7 +20,7 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 export default function EmployeeProfilePage() {
   const { id } = useParams<{ id: string }>()
-  const { profile: myProfile } = useAuth()
+  const { profile: myProfile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [emp, setEmp] = useState<Profile | null>(null)
   const [certs, setCerts] = useState<Certificate[]>([])
@@ -32,9 +32,11 @@ export default function EmployeeProfilePage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'leave'>('overview')
 
   useEffect(() => {
-    if (myProfile?.role !== 'manager') { router.push('/dashboard'); return }
+    if (authLoading) return                          // wait for auth
+    if (!myProfile) return                           // still loading profile
+    if (myProfile.role !== 'manager') { router.push('/dashboard'); return }
     loadData()
-  }, [id, myProfile])
+  }, [id, myProfile, authLoading])
 
   async function loadData() {
     setLoading(true)

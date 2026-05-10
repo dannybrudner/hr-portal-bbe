@@ -13,7 +13,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (!user) { router.push('/login'); return }
     // Block access until profile is complete
     // profile_complete is false by default for new users
-    if (profile && !(profile as any).profile_complete) {
+    // Only redirect when profile is fully loaded AND confirmed incomplete
+    // Do NOT redirect when profile is null (still loading)
+    if (profile !== null && profile !== undefined && !(profile as any).profile_complete) {
       router.push('/complete-profile')
     }
   }, [user, profile, loading, router])
