@@ -277,6 +277,7 @@ export default function DashboardPage() {
                           color: isMe ? '#1a1000' : 'var(--accent-light)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           width: '100%', boxSizing: 'border-box',
+                          textAlign: 'center',
                         }}>{name}</div>
                       )
                     })}
