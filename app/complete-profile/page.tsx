@@ -21,6 +21,7 @@ function CompleteProfileForm() {
   const [lastNameHe, setLastNameHe] = useState('')
   const [firstNameEn, setFirstNameEn] = useState('')
   const [lastNameEn, setLastNameEn] = useState('')
+  const [idNumber, setIdNumber] = useState('')
   const [birthday, setBirthday] = useState('')
   const [phone, setPhone] = useState('')
   const [privateEmail, setPrivateEmail] = useState('')
@@ -39,7 +40,8 @@ function CompleteProfileForm() {
         setLastNameHe((profile as any).last_name_he || '')
         setFirstNameEn((profile as any).first_name_en || '')
         setLastNameEn((profile as any).last_name_en || '')
-        setBirthday((profile as any).birthday || '')
+        setIdNumber((profile as any).id_number || '')
+      setBirthday((profile as any).birthday || '')
         setPhone(profile.phone || '')
         setPrivateEmail((profile as any).private_email || '')
         setAddress(profile.address || '')
@@ -80,6 +82,7 @@ function CompleteProfileForm() {
       last_name_he: lastNameHe,
       first_name_en: firstNameEn,
       last_name_en: lastNameEn,
+      id_number: idNumber,
       birthday,
       phone,
       private_email: privateEmail,
@@ -163,9 +166,14 @@ function CompleteProfileForm() {
 
             {/* Birthday */}
             <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem' }}>Personal Details</div>
-            <Field label="Birthday" required>
-              <input className="input" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} required />
-            </Field>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <Field label="ID Number · ת.ז.">
+                <input className="input" placeholder="123456789" value={idNumber} onChange={e => setIdNumber(e.target.value)} />
+              </Field>
+              <Field label="Birthday" required>
+                <input className="input" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} required />
+              </Field>
+            </div>
 
             {/* Contact */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [lastNameHe, setLastNameHe] = useState('')
   const [firstNameEn, setFirstNameEn] = useState('')
   const [lastNameEn, setLastNameEn] = useState('')
+  const [idNumber, setIdNumber] = useState('')
   const [birthday, setBirthday] = useState('')
   const [privateEmail, setPrivateEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -35,6 +36,7 @@ export default function ProfilePage() {
       setLastNameHe((profile as any).last_name_he || parts[1] || '')
       setFirstNameEn((profile as any).first_name_en || '')
       setLastNameEn((profile as any).last_name_en || '')
+      setIdNumber((profile as any).id_number || '')
       setBirthday((profile as any).birthday || '')
       setPrivateEmail((profile as any).private_email || '')
       setPhone(profile.phone || '')
@@ -91,6 +93,7 @@ export default function ProfilePage() {
       last_name_he: lastNameHe,
       first_name_en: firstNameEn,
       last_name_en: lastNameEn,
+      id_number: idNumber,
       birthday: birthday || null,
       private_email: privateEmail,
       phone, address,
@@ -170,9 +173,15 @@ export default function ProfilePage() {
             <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--accent-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
               תאריך לידה
             </div>
-            <div>
-              <label>Birthday <span style={{ color: 'var(--status-rejected)', fontWeight: '700' }}>*</span></label>
-              <input className="input" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} required />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label>ID Number · מספר תעודת זהות</label>
+                <input className="input" placeholder="e.g. 123456789" value={idNumber} onChange={e => setIdNumber(e.target.value)} />
+              </div>
+              <div>
+                <label>Birthday <span style={{ color: 'var(--status-rejected)', fontWeight: '700' }}>*</span></label>
+                <input className="input" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} required />
+              </div>
             </div>
 
             {/* English name */}

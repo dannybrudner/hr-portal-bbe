@@ -25,6 +25,7 @@ export type Profile = {
   private_email?: string
   birthday?: string
   profile_complete?: boolean
+  id_number?: string
 }
 
 export type LeaveRequest = {
