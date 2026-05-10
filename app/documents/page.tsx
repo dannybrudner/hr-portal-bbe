@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { uploadAndRegister, DocumentType } from '@/lib/documentService'
 import { DocViewButton } from '@/components/DocViewer'
 import toast from 'react-hot-toast'
+import Modal from '@/components/Modal'
 import { FolderOpen, Folder, Upload, FileText, X, Plus, Trash2, Search, ChevronRight, ExternalLink, Download } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -245,14 +246,7 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {/* Upload Modal */}
-      {showUpload && (
-        <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: '440px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '18px', fontWeight: '700' }}>Upload Document</h2>
-              <button onClick={() => setShowUpload(false)} className="btn-secondary" style={{ padding: '0.4rem' }}><X size={16} /></button>
-            </div>
+      <Modal open={showUpload} onClose={() => setShowUpload(false)} title="Upload Document" maxWidth={440}>
             <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
                 <label>Document Type</label>
@@ -283,9 +277,7 @@ export default function DocumentsPage() {
                 <button type="button" className="btn-secondary" onClick={() => { setShowUpload(false); setFile(null) }}>Cancel</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

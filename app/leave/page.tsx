@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, LeaveRequest } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
-import { Upload, X as XIcon, Paperclip, Plus, X, Calendar, Clock, Archive, RotateCcw, AlertCircle } from 'lucide-react'
+import { Upload, X as XIcon, Paperclip, Plus, Calendar, Clock, Archive, RotateCcw } from 'lucide-react'
+import Modal from '@/components/Modal'
 import { format, differenceInCalendarDays } from 'date-fns'
 
 const LEAVE_TYPES = ['חופשה', 'מחלה', 'מילואים']
@@ -250,15 +251,9 @@ export default function LeavePage() {
         </div>
       )}
 
-      {/* New Request Modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: '700' }}>New Leave Request</h2>
-              <button onClick={() => setShowModal(false)} className="btn-secondary" style={{ padding: '0.4rem' }}><X size={16} /></button>
-            </div>
-            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* New Request Modal — renders via portal, never clipped by layout */}
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="New Leave Request">
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <label>Leave Type</label>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -313,9 +308,7 @@ export default function LeavePage() {
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

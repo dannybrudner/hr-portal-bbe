@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase, Certificate } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
+import Modal from '@/components/Modal'
 import { DocViewButton } from '@/components/DocViewer'
 import { Save, Plus, X, Award, Trash2, Upload } from 'lucide-react'
 
@@ -290,13 +291,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {showCertModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: '700' }}>Add Certificate</h2>
-              <button onClick={() => setShowCertModal(false)} className="btn-secondary" style={{ padding: '0.4rem' }}><X size={16} /></button>
-            </div>
+      <Modal open={showCertModal} onClose={() => setShowCertModal(false)} title="Add Certificate">
             <form onSubmit={addCert} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div><label>Certificate Name</label><input className="input" placeholder="e.g. B.Sc Computer Science" value={certName} onChange={e => setCertName(e.target.value)} required /></div>
               <div><label>Issued By</label><input className="input" placeholder="Institution name" value={certIssuedBy} onChange={e => setCertIssuedBy(e.target.value)} /></div>
@@ -313,9 +308,7 @@ export default function ProfilePage() {
                 <button type="button" className="btn-secondary" onClick={() => setShowCertModal(false)}>Cancel</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

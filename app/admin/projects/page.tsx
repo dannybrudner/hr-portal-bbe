@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
+import Modal from '@/components/Modal'
 import { Plus, X, Trash2, Users, Clock, ExternalLink, ChevronDown, ChevronUp, Upload, FileSpreadsheet } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -236,14 +237,7 @@ export default function AdminProjectsPage() {
         </div>
       )}
 
-      {/* New Project Modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: '560px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: '700' }}>New Project</h2>
-              <button onClick={() => setShowModal(false)} className="btn-secondary" style={{ padding: '0.4rem' }}><X size={16} /></button>
-            </div>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="New Project" maxWidth={560}>
             <form onSubmit={createProject} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
                 <div><label>Project Name *</label><input className="input" placeholder="e.g. Metro M3 Station" value={pName} onChange={e => setPName(e.target.value)} required /></div>
@@ -268,9 +262,7 @@ export default function AdminProjectsPage() {
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

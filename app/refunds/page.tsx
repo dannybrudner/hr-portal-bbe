@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, RefundRequest } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
+import Modal from '@/components/Modal'
 import { DocViewButton } from '@/components/DocViewer'
 import { Plus, X, ReceiptText, Upload } from 'lucide-react'
 import { format } from 'date-fns'
@@ -142,13 +143,7 @@ export default function RefundsPage() {
         </div>
       )}
 
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', fontWeight: '700' }}>New Refund Request</h2>
-              <button onClick={() => setShowModal(false)} className="btn-secondary" style={{ padding: '0.4rem' }}><X size={16} /></button>
-            </div>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="New Refund Request">
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <label>Title</label>
@@ -201,9 +196,7 @@ export default function RefundsPage() {
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

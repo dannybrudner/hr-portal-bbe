@@ -4,6 +4,7 @@ import { supabase, OfficeDay, CalendarEvent, Profile } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight, Plus, X, Pencil, Trash2 } from 'lucide-react'
+import Modal from '@/components/Modal'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths } from 'date-fns'
 import { fetchHolidaysForMonth, getHoliday } from '@/lib/israeliHolidays'
 
@@ -292,18 +293,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Add/Edit Event Modal — managers only */}
-      {showAddEvent && isManager && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '18px', fontWeight: '700' }}>
-                {editingEvent ? 'Edit Event' : 'Add Company Event'}
-              </h2>
-              <button onClick={() => { setShowAddEvent(false); setEditingEvent(null) }} className="btn-secondary" style={{ padding: '0.4rem' }}>
-                <X size={16} />
-              </button>
-            </div>
+      {/* Add/Edit Event Modal — renders via portal */}
+      <Modal
+        open={showAddEvent && isManager}
+        onClose={() => { setShowAddEvent(false); setEditingEvent(null) }}
+        title={editingEvent ? 'Edit Event' : 'Add Company Event'}
+        maxWidth={460}
+      >
             <form onSubmit={saveEvent} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
                 <label>Event Title</label>
@@ -325,9 +321,7 @@ export default function DashboardPage() {
                 )}
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }
