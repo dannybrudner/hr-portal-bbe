@@ -14,6 +14,7 @@
  *   <button onClick={() => viewer.openPath('payslips/user-id/file.pdf', 'Payslip')}>View</button>
  */
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Download, ZoomIn, ZoomOut, RotateCcw, Maximize2, ExternalLink, FileText, Image, FileSpreadsheet, FileWarning } from 'lucide-react'
 import { getSignedUrl } from '@/lib/documentService'
 
@@ -130,10 +131,10 @@ export function DocViewerModal({ viewer }: DocViewerModalProps) {
   const fileType = file?.fileType ?? 'unknown'
   const FileIcon = fileType === 'pdf' ? FileText : fileType === 'image' ? Image : fileType === 'office' ? FileSpreadsheet : FileWarning
 
-  return (
+  const modal = (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(0,0,0,0.92)',
         display: 'flex', flexDirection: 'column',
       }}
@@ -250,6 +251,9 @@ export function DocViewerModal({ viewer }: DocViewerModalProps) {
       </div>
     </div>
   )
+
+  if (typeof document === 'undefined') return null
+  return createPortal(modal, document.body)
 }
 
 const toolbarBtnStyle: React.CSSProperties = {
