@@ -96,6 +96,21 @@ export type Certificate = {
   created_at: string
 }
 
+export type EmployeeDocument = {
+  id: string
+  employee_id: string
+  uploaded_by: string
+  document_type: string
+  file_name: string
+  storage_path: string
+  upload_date: string
+  year: number
+  quarter: number
+  related_entity_id: string | null
+  tags: string[]
+  created_at: string
+}
+
 export type OfficeDay = {
   id: string
   user_id: string

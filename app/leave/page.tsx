@@ -3,8 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, LeaveRequest } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import toast from 'react-hot-toast'
-import { Upload, X as XIcon, Paperclip } from 'lucide-react'
-import { Plus, X, Calendar, Clock } from 'lucide-react'
+import { Upload, X as XIcon, Paperclip, Plus, X, Calendar, Clock, Archive, RotateCcw, AlertCircle } from 'lucide-react'
 import { format, differenceInCalendarDays } from 'date-fns'
 
 const LEAVE_TYPES = ['חופשה', 'מחלה', 'מילואים']
@@ -17,33 +16,39 @@ export default function LeavePage() {
   const [showModal, setShowModal] = useState(false)
   const [leaveType, setLeaveType] = useState('חופשה')
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
-  const [attachmentUrl, setAttachmentUrl] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(false)
+  const [archivingId, setArchivingId] = useState<string | null>(null)
 
-  const fetch = useCallback(async () => {
-    const { data } = await supabase
+  const loadRequests = useCallback(async () => {
+    if (!user) return
+    setFetching(true)
+    const { data, error } = await supabase
       .from('leave_requests')
       .select('*')
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .eq('archived', showArchived)
       .order('created_at', { ascending: false })
-    setRequests(data || [])
+    if (error) {
+      console.error('[leave] fetch error:', error)
+      toast.error('Failed to load requests')
+    } else {
+      setRequests(data || [])
+    }
+    setFetching(false)
   }, [user, showArchived])
 
-  useEffect(() => { fetch() }, [fetch])
+  useEffect(() => { loadRequests() }, [loadRequests])
 
   async function uploadAttachment(file: File, leaveId: string): Promise<string> {
-    // Sanitize filename to prevent path traversal
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const path = `leave-attachments/${leaveId}/${safeName}`
     const { error } = await supabase.storage.from('documents').upload(path, file, { upsert: false })
     if (error) throw error
-    // Return the storage path only — signed URLs generated server-side on demand
-    // Do NOT use getPublicUrl — bucket must be private
     return path
   }
 
@@ -53,9 +58,18 @@ export default function LeavePage() {
     const { data: inserted, error } = await supabase.from('leave_requests').insert({
       user_id: user!.id, leave_type: leaveType,
       start_date: startDate, end_date: endDate,
-      reason, status: 'pending',
+      reason, status: 'pending', archived: false,
     }).select().single()
     if (error) { toast.error(error.message); setLoading(false); return }
+
+    // Upload attachment if provided
+    if (attachmentFile && inserted) {
+      try {
+        const path = await uploadAttachment(attachmentFile, inserted.id)
+        await supabase.from('leave_requests').update({ attachment_path: path }).eq('id', inserted.id)
+      } catch (err) { console.error('Attachment upload failed:', err) }
+    }
+
     const { data: prof } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single()
     window.fetch('/api/notify-leave-request', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -63,88 +77,122 @@ export default function LeavePage() {
         leaveRequestId: inserted.id,
         employeeName: (prof as any)?.full_name || user!.email,
         employeeEmail: (prof as any)?.email || user!.email,
-        leaveType, startDate, endDate, reason, fileUrl: attachmentUrl,
+        leaveType, startDate, endDate, reason,
       }),
     }).catch(() => {})
-    toast.success('Request submitted! Manager has been notified.')
+
+    toast.success('Request submitted!')
     setShowModal(false)
-    setStartDate(''); setEndDate(''); setReason(''); setLeaveType('חופשה'); setAttachmentFile(null); setAttachmentUrl('')
-    fetch()
+    setStartDate(''); setEndDate(''); setReason(''); setLeaveType('חופשה'); setAttachmentFile(null)
+    await loadRequests()
     setLoading(false)
   }
 
   async function archiveRequest(id: string) {
+    setArchivingId(id)
     // Optimistic: remove from list immediately
     setRequests(prev => prev.filter(r => r.id !== id))
-    const { error, count } = await supabase
+
+    const { data, error } = await supabase
       .from('leave_requests')
       .update({ archived: true })
       .eq('id', id)
-      .eq('user_id', user!.id)  // explicit user_id for RLS
+      .eq('user_id', user!.id)
       .select('id')
+
     if (error) {
+      console.error('[leave] archive error:', error)
       toast.error('Archive failed: ' + error.message)
-      fetch() // revert
+      await loadRequests() // revert optimistic
+    } else if (!data || data.length === 0) {
+      console.error('[leave] archive: 0 rows updated — possible RLS issue')
+      toast.error('Archive failed — permission denied')
+      await loadRequests()
     } else {
-      toast.success('Request archived')
-      // fetch() not needed — optimistic update already removed it
+      toast.success('Archived')
     }
+    setArchivingId(null)
   }
 
   async function unarchiveRequest(id: string) {
+    setArchivingId(id)
     setRequests(prev => prev.filter(r => r.id !== id))
-    const { error } = await supabase
+
+    const { data, error } = await supabase
       .from('leave_requests')
       .update({ archived: false })
       .eq('id', id)
       .eq('user_id', user!.id)
       .select('id')
+
     if (error) {
       toast.error('Restore failed: ' + error.message)
-      fetch()
+      await loadRequests()
+    } else if (!data || data.length === 0) {
+      toast.error('Restore failed — permission denied')
+      await loadRequests()
     } else {
       toast.success('Restored')
     }
+    setArchivingId(null)
   }
 
   const days = (r: LeaveRequest) => differenceInCalendarDays(new Date(r.end_date), new Date(r.start_date)) + 1
 
   return (
     <div className="fade-in">
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
         <div>
           <div className="section-title">Leave Requests</div>
           <div className="section-subtitle">Submit and track your vacation, sick days, and other leave</div>
         </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={16} /> New Request
-        </button>
+        {!showArchived && (
+          <button className="btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={16} /> New Request
+          </button>
+        )}
       </div>
 
-      {/* Active / Archived toggle */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-        <button onClick={() => setShowArchived(false)}
+      {/* Active / Archived toggle — always above the list */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        <button
+          onClick={() => setShowArchived(false)}
           className={!showArchived ? 'btn-primary' : 'btn-secondary'}
           style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
           Active
         </button>
-        <button onClick={() => setShowArchived(true)}
+        <button
+          onClick={() => setShowArchived(true)}
           className={showArchived ? 'btn-primary' : 'btn-secondary'}
-          style={{ padding: '0.4rem 1rem', fontSize: '13px' }}>
-          🗂 Archived
+          style={{ padding: '0.4rem 1rem', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Archive size={13} /> Archived
         </button>
       </div>
 
-      {requests.length === 0 ? (
+      {/* List */}
+      {fetching ? (
+        <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading...</div>
+      ) : requests.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
           <Calendar size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 1rem' }} />
-          <div style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>No leave requests yet</div>
-          <button className="btn-primary" onClick={() => setShowModal(true)}><Plus size={16} /> Submit First Request</button>
+          <div style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+            {showArchived ? 'No archived requests' : 'No active leave requests'}
+          </div>
+          {!showArchived && (
+            <button className="btn-primary" onClick={() => setShowModal(true)}>
+              <Plus size={16} /> Submit First Request
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {requests.map(r => (
-            <div key={r.id} className="card card-hover" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div key={r.id} className="card card-hover" style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: '1rem',
+              opacity: archivingId === r.id ? 0.5 : 1, transition: 'opacity 0.2s',
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{
                   width: '48px', height: '48px', borderRadius: '14px',
@@ -168,24 +216,28 @@ export default function LeavePage() {
                   )}
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
                 <span className={`badge badge-${r.status}`}>
                   {r.status === 'pending' ? '⏳' : r.status === 'approved' ? '✓' : '✗'} {r.status}
                 </span>
                 {!showArchived && (r.status === 'approved' || r.status === 'rejected') && (
-                  <button onClick={() => archiveRequest(r.id)}
+                  <button
+                    onClick={() => archiveRequest(r.id)}
+                    disabled={archivingId === r.id}
                     className="btn-secondary"
-                    style={{ padding: '0.3rem 0.6rem', fontSize: '11px', opacity: 0.7 }}
+                    style={{ padding: '0.3rem 0.7rem', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                     title="Archive this request">
-                    🗂
+                    <Archive size={12} /> Archive
                   </button>
                 )}
                 {showArchived && (
-                  <button onClick={() => unarchiveRequest(r.id)}
+                  <button
+                    onClick={() => unarchiveRequest(r.id)}
+                    disabled={archivingId === r.id}
                     className="btn-secondary"
-                    style={{ padding: '0.3rem 0.6rem', fontSize: '11px' }}
-                    title="Restore">
-                    ↩
+                    style={{ padding: '0.3rem 0.7rem', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                    title="Restore to active">
+                    <RotateCcw size={12} /> Restore
                   </button>
                 )}
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -198,6 +250,7 @@ export default function LeavePage() {
         </div>
       )}
 
+      {/* New Request Modal */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -235,7 +288,6 @@ export default function LeavePage() {
                 <label>Reason (optional)</label>
                 <textarea className="input" rows={3} placeholder="Brief reason for your leave..." value={reason} onChange={e => setReason(e.target.value)} style={{ resize: 'vertical' }} />
               </div>
-              {/* File attachment */}
               <div>
                 <label>Attachment (optional)</label>
                 <label style={{
@@ -256,7 +308,6 @@ export default function LeavePage() {
                     onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
                 </label>
               </div>
-
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Submitting...' : 'Submit Request'}</button>
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>

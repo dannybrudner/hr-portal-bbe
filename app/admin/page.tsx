@@ -502,26 +502,45 @@ export default function AdminPage() {
       {tab === 'users' && (
         <div>
           <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-            Employees ({allProfiles.length}) · Role assignment via backend only
+            {allProfiles.length} team member{allProfiles.length !== 1 ? 's' : ''} · Click any card to view full profile
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
             {allProfiles.map(p => (
-              <div key={p.id} className="card card-hover" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div className="avatar">{p.full_name?.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() || '?'}</div>
-                  <div>
-                    <div style={{ fontWeight: '600', fontSize: '14px' }}>{p.full_name || 'Unknown'}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{p.email}</div>
-                    <span className={`badge ${p.role === 'manager' ? 'badge-approved' : 'badge-pending'}`} style={{ marginTop: '4px', display: 'inline-flex' }}>
-                      {p.role === 'manager' ? '⭐ Manager' : '👤 Employee'}
-                    </span>
+              <div
+                key={p.id}
+                className="card card-hover"
+                onClick={() => router.push(`/admin/employee/${p.id}`)}
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0',
+                  padding: '1.25rem',
+                  minHeight: '120px',
+                }}>
+                {/* Top row: avatar + name/email */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+                  <div className="avatar" style={{ flexShrink: 0, width: '44px', height: '44px', fontSize: '16px', borderRadius: '14px' }}>
+                    {p.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: '600', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.full_name || 'Unknown'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                      {p.email}
+                    </div>
                   </div>
                 </div>
-                {p.id !== user!.id && (
-                  <button onClick={() => toggleRole(p)} className="btn-secondary" style={{ padding: '0.4rem 0.75rem', fontSize: '12px', flexShrink: 0 }}>
-                    Role: {p.role}
-                  </button>
-                )}
+                {/* Bottom row: badge + action */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.875rem' }}>
+                  <span className={`badge ${p.role === 'manager' ? 'badge-approved' : 'badge-pending'}`}>
+                    {p.role === 'manager' ? '⭐ Manager' : '👤 Employee'}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--accent-light)', fontWeight: '500' }}>
+                    View Profile →
+                  </span>
+                </div>
               </div>
             ))}
           </div>
