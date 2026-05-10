@@ -36,7 +36,7 @@ export default function DashboardPage() {
     const [{ data: od }, { data: ev }, { data: pr }] = await Promise.all([
       supabase.from('office_days').select('*, profiles(*)').gte('date', monthStr + '-01').lte('date', monthStr + '-31'),
       supabase.from('calendar_events').select('*').gte('date', monthStr + '-01').lte('date', monthStr + '-31').order('date'),
-      supabase.from('profiles').select('id, full_name, email, first_name_he, avatar_initials'),
+      supabase.from('profiles').select('id, full_name, email, first_name_he, first_name_en, last_name_he, last_name_en, avatar_initials'),
     ])
     setOfficeDays(od || [])
     setEvents(ev || [])
@@ -131,11 +131,31 @@ export default function DashboardPage() {
 
   const isSat = (d: Date) => getDay(d) === 6
 
-  // Get display name for a user in the calendar chip
+  // Get display name for a user in the calendar chip.
+  // Priority: first_name_he → first word of full_name → email prefix → email itself.
+  // Falls back to officeDays embedded profile (from the join) if allProfiles is missing the user.
+  // Returns '?' only if truly no data exists for this user.
   function getDisplayName(userId: string): string {
+    // Primary: allProfiles map (populated from flat profiles query)
     const p = allProfiles[userId] as any
-    if (!p) return '?'
-    return p.first_name_he || p.full_name?.split(' ')[0] || p.email?.split('@')[0] || '?'
+    if (p) {
+      // Try Hebrew first name, then English first name, then first word of full_name, then email prefix
+      return (p.first_name_he as string | undefined)?.trim() ||
+        (p.first_name_en as string | undefined)?.trim() ||
+        (p.full_name as string | undefined)?.split(' ')[0]?.trim() ||
+        (p.email as string | undefined)?.split('@')[0] ||
+        '?'
+    }
+    // Secondary: embedded profile from office_days join
+    const od = officeDays.find(o => o.user_id === userId)
+    const ep = (od as any)?.profiles as any
+    if (ep) {
+      return (ep.first_name_he as string | undefined)?.trim() ||
+        (ep.full_name as string | undefined)?.split(' ')[0]?.trim() ||
+        (ep.email as string | undefined)?.split('@')[0] ||
+        '?'
+    }
+    return '?'
   }
 
   return (
@@ -242,25 +262,26 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {officePeople.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', justifyContent: 'center' }}>
-                    {officePeople.slice(0, 3).map(od => {
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {officePeople.slice(0, 4).map(od => {
                       const name = getDisplayName(od.user_id)
                       const isMe = od.user_id === user?.id
+                      const fullTitle = allProfiles[od.user_id]?.full_name || name
                       return (
-                        <div key={od.id} title={allProfiles[od.user_id]?.full_name || ''} style={{
-                          borderRadius: '4px',
+                        <div key={od.id} title={fullTitle} style={{
+                          borderRadius: '3px',
                           background: isMe ? 'var(--accent)' : 'var(--accent-muted)',
                           border: '1px solid var(--border-accent)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                           padding: '1px 4px',
-                          fontSize: '9px', fontWeight: '700',
+                          fontSize: '9px', fontWeight: isMe ? '700' : '600',
                           color: isMe ? '#1a1000' : 'var(--accent-light)',
-                          whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          width: '100%', boxSizing: 'border-box',
                         }}>{name}</div>
                       )
                     })}
-                    {officePeople.length > 3 && (
-                      <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>+{officePeople.length - 3}</div>
+                    {officePeople.length > 4 && (
+                      <div style={{ fontSize: '9px', color: 'var(--text-muted)', paddingLeft: '2px' }}>+{officePeople.length - 4} more</div>
                     )}
                   </div>
                 )}
