@@ -60,14 +60,31 @@ export async function registerDocument(params: RegisterDocumentParams): Promise<
 
 /**
  * Get a signed URL for a private storage file.
- * Returns null on error.
+ * Routes through /api/attachment-url which uses the service role key,
+ * so managers can access any employee's files regardless of ownership.
+ * Falls back to the anon client for legacy/public URLs.
  */
 export async function getSignedUrl(storagePath: string, expiresInSeconds = 3600): Promise<string | null> {
-  const { data, error } = await supabase.storage
-    .from('documents')
-    .createSignedUrl(storagePath, expiresInSeconds)
-  if (error) { console.error('[documentService] signedUrl error:', error); return null }
-  return data.signedUrl
+  // Use the server-side route which uses service role — works for managers and employees
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) return null
+
+    const params = new URLSearchParams({ path: storagePath })
+    const res = await fetch(`/api/attachment-url?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) {
+      console.error('[documentService] attachment-url error:', res.status, await res.text())
+      return null
+    }
+    const { url } = await res.json()
+    return url ?? null
+  } catch (err) {
+    console.error('[documentService] signedUrl error:', err)
+    return null
+  }
 }
 
 /**
