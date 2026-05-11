@@ -16,8 +16,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       return
     }
     if (profile === null || profile === undefined) return // still loading profile
-    // Unapproved users — redirect to waiting page
-    if (!(profile as any).approved) {
+    // Unapproved users — only redirect when approved is explicitly false
+    // If the field is undefined (legacy profile), let them through
+    if ((profile as any).approved === false) {
       router.push('/pending-approval')
       return
     }
