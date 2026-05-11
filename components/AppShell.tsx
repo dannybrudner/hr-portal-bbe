@@ -10,7 +10,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return
-    if (!user) { router.push('/login'); return }
+    if (!user) {
+      const next = window.location.pathname + window.location.search
+      router.push(next && next !== '/' ? `/login?next=${encodeURIComponent(next)}` : '/login')
+      return
+    }
     // Block access until profile is complete
     // profile_complete is false by default for new users
     // Only redirect when profile is fully loaded AND confirmed incomplete

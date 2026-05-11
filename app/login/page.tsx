@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { AuthProvider } from '@/lib/AuthContext'
@@ -16,6 +17,7 @@ function LoginForm() {
   const [signupDone, setSignupDone] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const nextPath = useNextPath()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,7 +39,7 @@ function LoginForm() {
           sessionStorage.setItem('hr_session_only', 'true')
           localStorage.removeItem('hr_remember_me')
         }
-        router.push('/dashboard')
+        router.push(nextPath)
       } else {
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
@@ -176,10 +178,23 @@ function LoginForm() {
   )
 }
 
-export default function LoginPage() {
+function useNextPath() {
+  const searchParams = useSearchParams()
+  return searchParams.get('next') || '/dashboard'
+}
+
+function LoginInner() {
   return (
     <AuthProvider>
       <LoginForm />
     </AuthProvider>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginInner />
+    </Suspense>
   )
 }
