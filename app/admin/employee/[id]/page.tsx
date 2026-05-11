@@ -257,7 +257,9 @@ export default function EmployeeProfilePage() {
             ) : payslips.slice(0, 6).map(ps => (
               <div key={ps.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: '600', fontSize: '14px' }}>{MONTHS[ps.month - 1]} {ps.year}</span>
-                <DocViewButton url={ps.file_url} name={`Payslip ${MONTHS[ps.month-1]} ${ps.year}`}
+                <DocViewButton
+                  {...(ps.file_url?.startsWith('http') ? { url: ps.file_url } : { storagePath: ps.file_url })}
+                  name={`Payslip ${MONTHS[ps.month-1]} ${ps.year}`}
                   style={{ padding: '0.25rem 0.6rem', fontSize: '11px' }}>View</DocViewButton>
               </div>
             ))}
