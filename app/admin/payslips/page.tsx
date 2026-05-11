@@ -283,7 +283,6 @@ export default function ManagerPayslipsPage() {
                 {/* Payslip table — only shown when there are payslips */}
                 {empPayslips.length > 0 && (
                   <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-                    {(
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                         <thead>
                           <tr style={{ background: 'var(--bg-input)' }}>
