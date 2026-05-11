@@ -81,7 +81,7 @@ export default function ManagerPayslipsPage() {
       supabase.from('profiles').select('id, full_name, email, role').order('full_name'),
     ])
     setAllPayslips(ps || [])
-    setEmployees(((emps || []).filter(e => e.id !== user?.id)) as Profile[])
+    setEmployees((emps || []) as Profile[])
     setLoading(false)
   }, [user])
 
