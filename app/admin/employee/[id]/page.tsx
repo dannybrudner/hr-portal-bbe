@@ -62,21 +62,22 @@ export default function EmployeeProfilePage() {
     if (!emp) return
     setDeleting(true)
     try {
-      // Delete in order: leave dependent data first, then profile
-      await supabase.from('leave_requests').delete().eq('user_id', emp.id)
-      await supabase.from('refund_requests').delete().eq('user_id', emp.id)
-      await supabase.from('payslips').delete().eq('user_id', emp.id)
-      await supabase.from('tax_forms').delete().eq('user_id', emp.id)
-      await supabase.from('certificates').delete().eq('user_id', emp.id)
-      await supabase.from('hour_logs').delete().eq('user_id', emp.id)
-      await supabase.from('project_assignments').delete().eq('user_id', emp.id)
-      await supabase.from('office_days').delete().eq('user_id', emp.id)
-      await supabase.from('notifications').delete().eq('user_id', emp.id)
-      await supabase.from('employee_documents').delete().eq('employee_id', emp.id)
-      await supabase.from('calendar_events').delete().eq('created_by', emp.id).eq('event_type', 'birthday')
-      // Finally delete the profile (auth user stays — Supabase auth user must be deleted via admin API separately)
-      const { error } = await supabase.from('profiles').delete().eq('id', emp.id)
-      if (error) { toast.error('Delete failed: ' + error.message); setDeleting(false); return }
+      const session = await supabase.auth.getSession()
+      const token = session.data.session?.access_token
+      const res = await fetch('/api/delete-employee', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ employeeId: emp.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error('Delete failed: ' + (data.error || res.status))
+        setDeleting(false)
+        return
+      }
       toast.success(`${emp.full_name || 'Employee'} has been removed.`)
       router.push('/admin')
     } catch (err: any) {
