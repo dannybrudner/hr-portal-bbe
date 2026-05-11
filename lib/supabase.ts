@@ -26,6 +26,8 @@ export type Profile = {
   birthday?: string
   profile_complete?: boolean
   id_number?: string
+  approved?: boolean
+  approved_at?: string
 }
 
 export type LeaveRequest = {

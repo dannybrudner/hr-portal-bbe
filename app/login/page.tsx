@@ -41,21 +41,18 @@ function LoginForm() {
         }
         router.push(nextPath)
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password })
-        if (error) throw error
-        if (data.user) {
-          const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-          await supabase.from('profiles').insert({
-            id: data.user.id,
-            email,
-            full_name: fullName,
-            role: 'employee',
-            avatar_initials: initials,
-            phone: '', address: '', emergency_contact_name: '',
-            emergency_contact_phone: '', bio: '',
-          })
-          setSignupDone(true)
-        }
+        // Registration goes through server-side route — prevents client from
+        // manipulating role or approval status via direct Supabase calls
+        if (password !== confirmPassword) throw new Error('Passwords do not match')
+        if (password.length < 8) throw new Error('Password must be at least 8 characters')
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, fullName }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Registration failed')
+        setSignupDone(true)
       }
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong')
@@ -103,7 +100,7 @@ function LoginForm() {
             <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '20px', marginBottom: '0.75rem' }}>Check your email!</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, marginBottom: '1.5rem' }}>
               We sent a confirmation link to <strong style={{ color: 'var(--accent-light)' }}>{email}</strong>.<br />
-              Click the link to activate your account, then sign in.
+              Click the link to verify your email. Your manager will then receive an approval request — you'll get a welcome email once approved.
             </p>
             <button className="btn-secondary" onClick={() => { setSignupDone(false); setMode('login') }}>
               ← Back to Sign In
@@ -180,7 +177,10 @@ function LoginForm() {
 
 function useNextPath() {
   const searchParams = useSearchParams()
-  return searchParams.get('next') || '/dashboard'
+  const next = searchParams.get('next') || '/dashboard'
+  // Prevent open redirect: only allow relative internal paths
+  if (!next.startsWith('/') || next.startsWith('//')) return '/dashboard'
+  return next
 }
 
 function LoginInner() {

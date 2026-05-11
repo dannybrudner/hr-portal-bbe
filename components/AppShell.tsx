@@ -10,15 +10,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return
+    // Middleware handles unauthenticated + unapproved redirects server-side.
+    // AppShell handles the profile_complete client-side gate as a fallback.
     if (!user) {
       const next = window.location.pathname + window.location.search
       router.push(next && next !== '/' ? `/login?next=${encodeURIComponent(next)}` : '/login')
       return
     }
-    // Block access until profile is complete
-    // profile_complete is false by default for new users
-    // Only redirect when profile is fully loaded AND confirmed incomplete
-    // Do NOT redirect when profile is null (still loading)
     if (profile !== null && profile !== undefined && !(profile as any).profile_complete) {
       router.push('/complete-profile')
     }
