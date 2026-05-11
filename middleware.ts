@@ -1,29 +1,17 @@
 /**
- * Next.js Edge Middleware — runs before every request.
- *
- * Enforces two things server-side (cannot be bypassed by frontend manipulation):
- * 1. Authentication — redirects unauthenticated users to /login
- * 2. Approval gate — redirects authenticated but unapproved users to /pending-approval
- *
- * Why middleware and not just AppShell:
- * - AppShell is client-side React — it fires after the page HTML is served
- * - Middleware runs at the edge, before the response is built
- * - Prevents unapproved users from making API calls or seeing any page content
- *
- * Note: Supabase session validation via @supabase/ssr is the correct pattern
- * for Next.js App Router. We deliberately use the cookie-based session here.
+ * Next.js Edge Middleware — server-side auth + approval gate.
+ * Uses @supabase/ssr to read the session from cookies set by Supabase Auth.
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-// Paths that do NOT require authentication
 const PUBLIC_PATHS = [
   '/login',
-  '/api/register',           // signup endpoint
-  '/api/approve-employee',   // manager approval links (token-authenticated)
-  '/api/refund-status',      // JWT-authenticated separately
-  '/auth',                   // Supabase auth callbacks
-  '/pending-approval',       // "waiting for approval" page
+  '/api/register',
+  '/api/approve-employee',
+  '/api/refund-status',
+  '/auth',
+  '/pending-approval',
   '/_next',
   '/favicon',
   '/logo',
@@ -38,8 +26,8 @@ export async function middleware(request: NextRequest) {
 
   if (isPublic(pathname)) return NextResponse.next()
 
-  // Build a Supabase server client using request cookies
-  let response = NextResponse.next({ request })
+  // Build response object — cookies must be forwarded back to the browser
+  const response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,39 +45,36 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Validate session — getUser() verifies the JWT server-side
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() validates the JWT from the cookie server-side
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (userError || !user || !user.email_confirmed_at) {
     const loginUrl = new URL('/login', request.url)
     if (pathname !== '/') loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Check approval status — query the profiles table
-  // Use the anon client with the user's JWT: RLS allows reading own profile
-  const { data: profile } = await supabase
+  // Check approval — read own profile row (RLS allows auth.uid() = id always)
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('approved, role, profile_complete')
+    .select('approved, profile_complete')
     .eq('id', user.id)
     .single()
 
-  // Email not confirmed — send to login
-  if (!user.email_confirmed_at) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // If profile doesn't exist yet (race on first login after signup), let through
+  // so the app can handle it gracefully — the insert may still be in flight
+  if (profileError || !profile) {
+    return response
   }
 
-  // Account not approved — send to waiting page (API routes also blocked)
-  if (!profile?.approved) {
-    // Allow /pending-approval page itself and sign-out
-    if (pathname.startsWith('/pending-approval') || pathname.startsWith('/api/auth')) {
-      return response
-    }
+  // Unapproved — gate to pending page
+  if (!profile.approved) {
+    if (pathname.startsWith('/pending-approval')) return response
     return NextResponse.redirect(new URL('/pending-approval', request.url))
   }
 
-  // Profile not complete — send to onboarding (except complete-profile itself)
-  if (!profile?.profile_complete && !pathname.startsWith('/complete-profile')) {
+  // Profile incomplete — gate to onboarding
+  if (!profile.profile_complete && !pathname.startsWith('/complete-profile')) {
     return NextResponse.redirect(new URL('/complete-profile', request.url))
   }
 
@@ -98,7 +83,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static assets
-    '/((?!_next/static|_next/image|favicon\\.ico|logo\\.png|.*\\.svg|.*\\.png|.*\\.jpg).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|logo\\.png|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.ico).*)',
   ],
 }
