@@ -4,7 +4,7 @@ import { supabase, Profile, Payslip } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { Upload, Search, Send, ChevronDown, ChevronUp, Mail, Settings, Save, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, Search, Send, Mail, Settings, Save, X, AlertCircle, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import Modal from '@/components/Modal'
 import DropZone, { DropZoneFile } from '@/components/DropZone'
@@ -64,7 +64,6 @@ export default function ManagerPayslipsPage() {
   const [search, setSearch] = useState('')
   const [filterEmp, setFilterEmp] = useState('all')
   const [filterYear, setFilterYear] = useState('all')
-  const [expandedEmp, setExpandedEmp] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile) return
@@ -262,38 +261,29 @@ export default function ManagerPayslipsPage() {
             const empPayslips = (byEmployee[emp.id] || [])
               .filter(p => filterYear === 'all' || p.year === +filterYear)
               .sort((a, b) => b.year - a.year || b.month - a.month)
-            const isOpen = expandedEmp === emp.id
             const initials = emp.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
 
             return (
               <div key={emp.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {/* Row header */}
-                <div onClick={() => setExpandedEmp(isOpen ? null : emp.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem' }}>
                   <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '15px', borderRadius: '12px', flexShrink: 0 }}>{initials}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: '600', fontSize: '15px' }}>{emp.full_name || 'Unknown'}</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{emp.email}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-
-                    <button onClick={e => { e.stopPropagation(); setTargetEmployee(emp); setShowUpload(true) }}
+                    <button onClick={() => { setTargetEmployee(emp); setShowUpload(true) }}
                       className="btn-primary" style={{ padding: '0.35rem 0.85rem', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Upload size={13} /> Upload
                     </button>
-                    {isOpen ? <ChevronUp size={16} style={{ color: 'var(--text-muted)' }} />
-                            : <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />}
                   </div>
                 </div>
 
-                {/* Payslip table */}
-                {isOpen && (
+                {/* Payslip table — only shown when there are payslips */}
+                {empPayslips.length > 0 && (
                   <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-                    {empPayslips.length === 0 ? (
-                      <div style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        No payslips uploaded yet
-                      </div>
-                    ) : (
+                    {(
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                         <thead>
                           <tr style={{ background: 'var(--bg-input)' }}>
@@ -337,7 +327,6 @@ export default function ManagerPayslipsPage() {
                           ))}
                         </tbody>
                       </table>
-                    )}
                   </div>
                 )}
               </div>
