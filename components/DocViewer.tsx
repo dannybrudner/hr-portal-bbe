@@ -203,16 +203,24 @@ export function DocViewerModal({ viewer }: DocViewerModalProps) {
             <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
           </div>
         ) : fileType === 'pdf' ? (
-          <iframe
-            ref={iframeRef}
-            src={file.url + '#toolbar=1&navpanes=0'}
+          <object
+            data={file.url + '#toolbar=1&navpanes=0'}
+            type="application/pdf"
             style={{
               width: `${zoom}%`, minWidth: '320px', maxWidth: '1200px',
               height: '85vh', border: 'none', borderRadius: '8px',
               background: '#fff',
             }}
-            title={file.name}
-          />
+          >
+            {/* Fallback for browsers that don't support object tag for PDFs */}
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#9aa0b4' }}>
+              <p style={{ marginBottom: '1rem' }}>PDF preview not supported in this browser.</p>
+              <a href={file.url} target="_blank" rel="noreferrer"
+                style={{ background: '#C9A227', color: '#1a1000', padding: '10px 24px', borderRadius: '10px', textDecoration: 'none', fontWeight: '700' }}>
+                Open PDF
+              </a>
+            </div>
+          </object>
         ) : fileType === 'image' ? (
           <img
             src={file.url}
