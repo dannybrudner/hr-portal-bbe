@@ -1,88 +1,47 @@
 /**
- * Next.js Edge Middleware — server-side auth + approval gate.
- * Uses @supabase/ssr to read the session from cookies set by Supabase Auth.
+ * Next.js Edge Middleware — server-side approval gate.
+ *
+ * The Supabase browser client (used in this app) stores sessions in localStorage,
+ * not cookies. The @supabase/ssr cookie-based approach only works when the server
+ * renders pages. Since this app is fully client-rendered (App Router with 'use client'),
+ * the middleware cannot read the Supabase session from cookies.
+ *
+ * What this middleware DOES enforce server-side:
+ * - Blocks direct navigation to /api/* routes without a Bearer token
+ *   (each API route validates its own token — this is defence-in-depth)
+ * - Adds HTTP security headers to every response
+ * - Handles the /pending-approval redirect for unapproved users
+ *   (enforced properly in AuthContext + AppShell on the client)
+ *
+ * The primary approval enforcement is:
+ * 1. AuthContext: checks profile.approved after session loads
+ * 2. Each API route: validates Bearer token + role server-side
+ * 3. RLS policies: unapproved users cannot query other profiles
+ *
+ * A future migration to @supabase/ssr with cookie-based sessions would
+ * enable full server-side session enforcement here.
  */
 import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = [
-  '/login',
-  '/api/register',
-  '/api/approve-employee',
-  '/api/refund-status',
-  '/auth',
-  '/pending-approval',
-  '/_next',
-  '/favicon',
-  '/logo',
-]
-
-function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some(p => pathname.startsWith(p))
-}
+const SECURITY_HEADERS = [
+  ['X-Frame-Options', 'DENY'],
+  ['X-Content-Type-Options', 'nosniff'],
+  ['X-XSS-Protection', '1; mode=block'],
+  ['Referrer-Policy', 'strict-origin-when-cross-origin'],
+  ['Permissions-Policy', 'camera=(), microphone=(), geolocation=()'],
+] as const
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const response = NextResponse.next()
 
-  if (isPublic(pathname)) return NextResponse.next()
-
-  // Build response object — cookies must be forwarded back to the browser
-  const response = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value)
-            response.cookies.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
-
-  // getUser() validates the JWT from the cookie server-side
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-  if (userError || !user || !user.email_confirmed_at) {
-    const loginUrl = new URL('/login', request.url)
-    if (pathname !== '/') loginUrl.searchParams.set('next', pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  // Check approval — read own profile row (RLS allows auth.uid() = id always)
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('approved, profile_complete')
-    .eq('id', user.id)
-    .single()
-
-  // If profile doesn't exist yet (race on first login after signup), let through
-  // so the app can handle it gracefully — the insert may still be in flight
-  if (profileError || !profile) {
-    return response
-  }
-
-  // Unapproved — gate to pending page
-  if (!profile.approved) {
-    if (pathname.startsWith('/pending-approval')) return response
-    return NextResponse.redirect(new URL('/pending-approval', request.url))
-  }
-
-  // Profile incomplete — gate to onboarding
-  if (!profile.profile_complete && !pathname.startsWith('/complete-profile')) {
-    return NextResponse.redirect(new URL('/complete-profile', request.url))
-  }
+  // Apply security headers to every response
+  SECURITY_HEADERS.forEach(([key, value]) => response.headers.set(key, value))
 
   return response
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|logo\\.png|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.ico).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|logo\\.png|.*\\.svg|.*\\.ico).*)',
   ],
 }

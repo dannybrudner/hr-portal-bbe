@@ -10,14 +10,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return
-    // Middleware handles unauthenticated + unapproved redirects server-side.
-    // AppShell handles the profile_complete client-side gate as a fallback.
     if (!user) {
       const next = window.location.pathname + window.location.search
       router.push(next && next !== '/' ? `/login?next=${encodeURIComponent(next)}` : '/login')
       return
     }
-    if (profile !== null && profile !== undefined && !(profile as any).profile_complete) {
+    if (profile === null || profile === undefined) return // still loading profile
+    // Unapproved users — redirect to waiting page
+    if (!(profile as any).approved) {
+      router.push('/pending-approval')
+      return
+    }
+    // Profile incomplete — redirect to onboarding
+    if (!(profile as any).profile_complete) {
       router.push('/complete-profile')
     }
   }, [user, profile, loading, router])
